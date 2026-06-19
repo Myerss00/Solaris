@@ -500,6 +500,79 @@ class Webhook(TimestampMixin, Base):
     last_error = Column(String, nullable=True)
 
 
+class AdRewardToken(Base):
+    """Server-issued token for the public site's rewarded-ad gate.
+
+    Anonymous — there is no owner/session, just a single-use token that
+    proves the client waited out the ad before unlocking a paid generation
+    tier (HD/4K image, video). This only verifies elapsed time and one-time
+    use; it is not a real ad-network postback, so it stops casual reuse but
+    not a scripted client that's willing to sleep().
+    """
+    __tablename__ = "ad_reward_tokens"
+
+    token = Column(String, primary_key=True, index=True)
+    tier = Column(String, nullable=False)  # e.g. "hd", "4k", "video_10s"
+    required_seconds = Column(Integer, nullable=False, default=28)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
+    verified_at = Column(DateTime, nullable=True)
+    used = Column(Boolean, default=False, nullable=False)
+
+
+class ImpactStat(Base):
+    """A single public running-total counter shown on /impact (e.g.
+    images_generated, donated_usd). Values only change via the admin
+    endpoint — there is no automatic accrual from ad revenue or real
+    donations, so every row starts at 0 until real figures are entered."""
+    __tablename__ = "impact_stats"
+
+    key = Column(String, primary_key=True)
+    value = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
+
+
+class ImpactProject(TimestampMixin, Base):
+    """A funded project shown on /impact with a progress bar. Admin-managed;
+    starts empty until real projects + real raised amounts are entered."""
+    __tablename__ = "impact_projects"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    icon = Column(String, nullable=True, default="")
+    goal_usd = Column(Integer, nullable=False, default=0)
+    raised_usd = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+
+
+class ImpactFeedEntry(Base):
+    """A single public transparency-feed line ("$X -> Y"). Admin-managed;
+    starts empty — entries are only added once a real transfer happened."""
+    __tablename__ = "impact_feed"
+
+    id = Column(String, primary_key=True, index=True)
+    occurred_at = Column(DateTime, nullable=False, default=utcnow_naive)
+    amount_usd = Column(Integer, nullable=True)
+    description = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utcnow_naive)
+
+
+class EmailSignup(Base):
+    """'Notify me' signups for public-site features that aren't live yet
+    (video/audio generation has no model behind it). Anonymous — just an
+    email + which feature they're waiting on."""
+    __tablename__ = "email_signups"
+
+    id = Column(String, primary_key=True, index=True)
+    email = Column(String, nullable=False, index=True)
+    feature = Column(String, nullable=False)  # "video" or "audio"
+    created_at = Column(DateTime, default=utcnow_naive)
+
+    __table_args__ = (
+        Index("ix_email_signups_email_feature", "email", "feature", unique=True),
+    )
+
+
 class UserTool(TimestampMixin, Base):
     """User-created sandboxed mini-apps/tools."""
     __tablename__ = "user_tools"
@@ -1878,8 +1951,8 @@ def _migrate_chat_messages_fts():
     try:
         conn = sqlite3.connect(db_path)
         try:
-            conn.execute("CREATE VIRTUAL TABLE IF NOT EXISTS temp._odysseus_fts5_probe USING fts5(content)")
-            conn.execute("DROP TABLE IF EXISTS temp._odysseus_fts5_probe")
+            conn.execute("CREATE VIRTUAL TABLE IF NOT EXISTS temp._solaris_fts5_probe USING fts5(content)")
+            conn.execute("DROP TABLE IF EXISTS temp._solaris_fts5_probe")
         except Exception as e:
             logging.getLogger(__name__).warning(f"chat_messages FTS migration skipped; FTS5 unavailable: {e}")
             return

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generate — Solaris</title>
+<link rel="stylesheet" href="/static/public.css">
+</head>
+<body class="pub">
+
+<header class="pub-header">
+  <div class="pub-logo">☀️ SOLARIS</div>
+  <nav class="pub-nav">
+    <div class="pub-nav-links">
+      <a href="/">Home</a>
+      <a href="/generate" class="active">Generate</a>
+      <a href="/impact">Impact</a>
+    </div>
+    <a href="/generate" class="pub-btn pub-btn-primary">Generate Free →</a>
+  </nav>
+</header>
+
+<div class="pub-container">
+  <div class="pub-tabs">
+    <button class="pub-tab active" data-tab="images">🎨 Images</button>
+    <button class="pub-tab" data-tab="videos">🎬 Videos</button>
+    <button class="pub-tab" data-tab="audio">🔊 Audio</button>
+  </div>
+
+  <!-- ===== IMAGES ===== -->
+  <div class="pub-panel active" id="panel-images">
+    <div class="pub-field">
+      <label>Describe your image...</label>
+      <textarea class="pub-textarea" id="img-prompt" placeholder="An orange sunset over snow-capped mountains..."></textarea>
+    </div>
+    <div class="pub-field">
+      <label>Style</label>
+      <div class="pub-chip-row" id="img-style-row">
+        <div class="pub-chip selected" data-value="photorealistic">Photorealistic</div>
+        <div class="pub-chip" data-value="anime">Anime</div>
+        <div class="pub-chip" data-value="digital art">Digital Art</div>
+        <div class="pub-chip" data-value="3d render">3D</div>
+        <div class="pub-chip" data-value="painting">Painting</div>
+      </div>
+    </div>
+    <div class="pub-field">
+      <label>Quality</label>
+      <div class="pub-chip-row" id="img-quality-row">
+        <div class="pub-chip selected" data-value="basic">Basic — Free, no ad</div>
+        <div class="pub-chip" data-value="hd">HD — 1 ad</div>
+        <div class="pub-chip" data-value="4k">4K — 2 ads</div>
+      </div>
+    </div>
+    <button class="pub-btn pub-btn-primary" id="img-generate-btn" style="width:100%;justify-content:center;">✨ Generate Image</button>
+
+    <!-- Hidden until a generation request is in flight or finishes -->
+    <div id="result" style="display:none; margin-top:2rem; text-align:center;">
+      <div id="spinner" class="pub-spinner-wrap">
+        <span id="spinner-text">⏳ Generating your image... this can take 15-30 seconds</span>
+        <div class="pub-spinner-bar"><div></div></div>
+      </div>
+
+      <div id="image-result" class="pub-result" style="display:none;">
+        <img id="generated-image" alt="Generated image" style="max-width:100%; border-radius:12px;">
+        <div class="pub-result-actions">
+          <button class="pub-btn pub-btn-primary" id="download-btn">⬇️ Download Free</button>
+          <button class="pub-btn pub-btn-outline" id="generate-again-btn">🔄 Generate Another</button>
+        </div>
+        <p class="pub-result-footnote">☀️ This image was generated with Solaris — part of the ad revenue goes to humanitarian aid</p>
+      </div>
+
+      <div id="error-result" class="pub-status pub-status-error" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ===== VIDEOS (no model connected yet) ===== -->
+  <div class="pub-panel" id="panel-videos">
+    <div class="pub-coming-soon">
+      <h3>🎬 Video Generation — Coming Soon</h3>
+      <p>We're connecting the video models. Sign up to know when it's ready.</p>
+      <div class="pub-signup-row">
+        <input type="email" id="video-signup-email" placeholder="you@email.com">
+        <button class="pub-btn pub-btn-primary" id="video-signup-btn">Notify Me</button>
+      </div>
+      <div class="pub-signup-msg" id="video-signup-msg"></div>
+    </div>
+  </div>
+
+  <!-- ===== AUDIO (no model connected yet) ===== -->
+  <div class="pub-panel" id="panel-audio">
+    <div class="pub-coming-soon">
+      <h3>🔊 Audio Generation — Coming Soon</h3>
+      <p>We're connecting the voice, music, and sound-effect models. Sign up to know when it's ready.</p>
+      <div class="pub-signup-row">
+        <input type="email" id="audio-signup-email" placeholder="you@email.com">
+        <button class="pub-btn pub-btn-primary" id="audio-signup-btn">Notify Me</button>
+      </div>
+      <div class="pub-signup-msg" id="audio-signup-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Ad reward modal -->
+<div class="pub-modal-overlay" id="pub-ad-modal">
+  <div class="pub-modal">
+    <h3>📺 One moment before generating</h3>
+    <div class="pub-ad-slot">[ Ad space ]</div>
+    <div class="pub-progress-bar"><div class="pub-progress-fill" id="pub-ad-progress-fill"></div></div>
+    <div class="pub-ad-countdown">⏱️ Wait <span id="pub-ad-time">--</span>s</div>
+    <div class="pub-modal-msg" id="pub-ad-msg"></div>
+    <button class="pub-modal-close" id="pub-ad-close" disabled>Close ❌</button>
+  </div>
+</div>
+
+<footer class="pub-footer">
+  <div>🌞 Solaris — Free forever. Made with ❤️ for the world</div>
+  <div class="pub-footer-links">
+    <a href="/impact">Privacy</a>
+    <a href="mailto:hello@solaris.local">Contact</a>
+  </div>
+</footer>
+
+<script src="/static/js/public.js"></script>
+<script src="/static/js/generate.js"></script>
+</body>
+</html>

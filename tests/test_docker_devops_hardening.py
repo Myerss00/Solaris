@@ -26,14 +26,14 @@ TEST_DOCS = [
 
 def _compose_env_names(path: Path) -> set[str]:
     compose = yaml.safe_load(path.read_text(encoding="utf-8"))
-    env = compose["services"]["odysseus"]["environment"]
+    env = compose["services"]["solaris"]["environment"]
     return {entry.split("=", 1)[0] for entry in env}
 
 
 def _upload_limit_env_names() -> set[str]:
     source = (ROOT / "src" / "upload_limits.py").read_text(encoding="utf-8")
-    return set(re.findall(r'"(ODYSSEUS_[A-Z_]*BYTES)"', source)) | {
-        "ODYSSEUS_CHAT_UPLOAD_MAX_BYTES"
+    return set(re.findall(r'"(SOLARIS_[A-Z_]*BYTES)"', source)) | {
+        "SOLARIS_CHAT_UPLOAD_MAX_BYTES"
     }
 
 

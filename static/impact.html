@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impact — Solaris</title>
+<link rel="stylesheet" href="/static/public.css">
+</head>
+<body class="pub">
+
+<header class="pub-header">
+  <div class="pub-logo">☀️ SOLARIS</div>
+  <nav class="pub-nav">
+    <div class="pub-nav-links">
+      <a href="/">Home</a>
+      <a href="/generate">Generate</a>
+      <a href="/impact" class="active">Impact</a>
+    </div>
+    <a href="/generate" class="pub-btn pub-btn-primary">Generate Free →</a>
+  </nav>
+</header>
+
+<div class="pub-container">
+  <section class="pub-section" style="padding-bottom:0;">
+    <h2>Financial transparency</h2>
+    <div class="pub-donut-wrap">
+      <div class="pub-donut" id="pub-donut">
+        <div class="pub-donut-center" id="pub-donut-center">No data yet</div>
+      </div>
+    </div>
+    <div class="pub-donut-legend">
+      <span><span class="pub-legend-dot" style="background:var(--pub-gold)"></span>Servers and development</span>
+      <span><span class="pub-legend-dot" style="background:var(--pub-orange)"></span>NGOs and humanitarian causes</span>
+    </div>
+    <p style="text-align:center;font-size:0.8rem;color:var(--pub-fg-muted);margin-top:-20px;margin-bottom:40px;">
+      The chart fills in with the real split as soon as the team confirms it — we don't show a made-up percentage.
+    </p>
+  </section>
+
+  <section class="pub-section" style="padding-top:0;">
+    <h2>Active projects</h2>
+    <div class="pub-projects" id="pub-projects">
+      <div class="pub-feed-empty">No projects published yet. They'll show up here as soon as the team confirms the first one.</div>
+    </div>
+  </section>
+
+  <section class="pub-section" style="padding-top:0;">
+    <h2>Public transaction log</h2>
+    <div class="pub-feed" id="pub-feed">
+      <div class="pub-feed-empty">No transactions recorded yet. This feed only shows real, team-confirmed transfers — not estimates.</div>
+    </div>
+  </section>
+</div>
+
+<footer class="pub-footer">
+  <div>🌞 Solaris — Free forever. Made with ❤️ for the world</div>
+  <div class="pub-footer-links">
+    <a href="/impact">Privacy</a>
+    <a href="mailto:hello@solaris.local">Contact</a>
+  </div>
+</footer>
+
+<script src="/static/js/impact.js"></script>
+</body>
+</html>

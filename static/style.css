@@ -1,5 +1,5 @@
 /* ============================================ */
-/* Odysseus UI — Consolidated Stylesheet        */
+/* Solaris UI — Consolidated Stylesheet        */
 /* ============================================ */
 
 
@@ -51,9 +51,9 @@
   --color-recording-hover: #d63031;
   --color-muted: #888;
   --color-muted-alt: #6b7280;
-  --color-accent: #00aaff;
+  --color-accent: #ff6b35;
   --color-agent-active: #00ff00;
-  --color-brand-blue: #3b82f6;
+  --color-brand-blue: #ffd700;
   --color-blind-orange: #ff9800;
   --color-save-green: var(--color-success);
   --color-link-hover: #66c7ff;
@@ -66,6 +66,10 @@
   /* Warm accent — used by the Goals/Today UI in Notes. Lives as a token so
      themes can override without touching the goal CSS. */
   --accent-warm: #d19a66;
+  /* Brand wordmark color — orange/gold, independent of the active theme's
+     --red so the Solaris brand stays consistent across themes unless the
+     user overrides it via the advanced "Logo" color picker. */
+  --brand-color: #ff6b35;
 }
 
 :root.light {
@@ -556,7 +560,9 @@ body.bg-pattern-sparkles {
     }
     .sidebar-brand {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
       flex-shrink: 0;
       min-height: 24px;
     }
@@ -570,6 +576,17 @@ body.bg-pattern-sparkles {
       position: relative;
       top: 0;
       left: -10px;
+    }
+    .sidebar-brand-subtitle {
+      font-size: 9px;
+      font-weight: 400;
+      line-height: 1.2;
+      opacity: 0.6;
+      white-space: nowrap;
+      user-select: none;
+      position: relative;
+      left: -10px;
+      top: -2px;
     }
     .sidebar-sep {
       display: none;
@@ -4159,6 +4176,9 @@ body.bg-pattern-sparkles {
         font-size: 1.2rem;
         left: 0 !important;
       }
+      .sidebar-brand-subtitle {
+        left: 0 !important;
+      }
       /* Sidebar inner — bigger spacing */
       .sidebar-inner {
         padding: 12px 10px 12px !important;
@@ -5727,7 +5747,7 @@ body.bg-pattern-sparkles {
     /* (legacy toolbar-toggle styles removed — now using .vis-* classes) */
 
     /* Demo highlight pulse */
-    .odysseus-highlight {
+    .solaris-highlight {
       outline: 2px solid var(--accent, var(--red)) !important;
       outline-offset: 1px;
       box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent, var(--red)) 18%, transparent);
@@ -5855,7 +5875,7 @@ body.bg-pattern-sparkles {
     @media (prefers-reduced-motion: reduce) {
       .th-cursor, .th-modal-group, .th-zone { animation: none !important; }
     }
-    .odysseus-hl-label {
+    .solaris-hl-label {
       position: absolute;
       top: -22px;
       left: 8px;
@@ -22222,7 +22242,7 @@ body.gallery-selecting .gallery-dl-btn,
 
 /* Welcome name — left-to-right wipe with a touch of horizontal stretch.
    Fires on initial render via the .welcome-name rule; restarts on Nobody⇄
-   Odysseus toggle via JS reflow trick. */
+   Solaris toggle via JS reflow trick. */
 .welcome-name {
   transform-origin: left center;
   animation: welcome-name-reveal 0.55s cubic-bezier(0.34, 1.32, 0.55, 1) both;

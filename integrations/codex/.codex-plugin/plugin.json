@@ -1,22 +1,22 @@
 {
-  "name": "odysseus",
+  "name": "solaris",
   "version": "0.1.1",
-  "description": "Connect Codex to a scoped Odysseus instance.",
+  "description": "Connect Codex to a scoped Solaris instance.",
   "author": {
-    "name": "Odysseus"
+    "name": "Solaris"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "Odysseus",
-    "shortDescription": "Use scoped Odysseus tools from Codex.",
-    "longDescription": "Connects Codex terminal sessions to Odysseus through user-controlled scoped API tokens. Codex must use /api/codex/* endpoints so Odysseus Settings can enforce tool access.",
-    "developerName": "Odysseus",
+    "displayName": "Solaris",
+    "shortDescription": "Use scoped Solaris tools from Codex.",
+    "longDescription": "Connects Codex terminal sessions to Solaris through user-controlled scoped API tokens. Codex must use /api/codex/* endpoints so Solaris Settings can enforce tool access.",
+    "developerName": "Solaris",
     "category": "Productivity",
     "capabilities": [
       "todos",
       "email",
       "scoped-api"
     ],
-    "defaultPrompt": "Use Odysseus only through configured scoped access. Check capabilities before reading or writing data."
+    "defaultPrompt": "Use Solaris only through configured scoped access. Check capabilities before reading or writing data."
   }
 }

@@ -1,0 +1,70 @@
+# Dockerfile.prod — production image for Solaris.
+#
+# Differences from the dev Dockerfile:
+#   - Multi-stage: Python deps are built/installed in a throwaway stage so
+#     pip's build cache and *.dist-info wheel caches never land in the final
+#     image layers (smaller image, faster pulls).
+#   - No --reload, no bind-mounted source code — the app code is baked in.
+#   - HEALTHCHECK so `docker compose ps` / orchestrators can see real status.
+#   - Runs behind a reverse proxy (see docker-compose.prod.yml + Caddyfile),
+#     so uvicorn is started with --proxy-headers to trust X-Forwarded-* from
+#     the proxy on the same Docker network.
+#
+# Cookbook (local model serving) still needs build-essential/cmake/git/nodejs
+# at *runtime* (it can build llama.cpp / install vllm inside the running
+# container), so those stay in the final stage — this is a production image
+# of the whole app, not a stripped-down API-only build.
+
+FROM python:3.14-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt requirements-optional.txt ./
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+ARG INSTALL_OPTIONAL=false
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && if [ "$INSTALL_OPTIONAL" = "true" ]; then pip install --no-cache-dir -r requirements-optional.txt; fi
+
+
+FROM python:3.14-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    curl \
+    git \
+    nodejs \
+    npm \
+    tmux \
+    openssh-client \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+COPY --from=builder /opt/venv /opt/venv
+
+WORKDIR /app
+COPY . .
+
+RUN mkdir -p data logs services/cache/search
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 7000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:7000/api/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7000", "--proxy-headers", "--forwarded-allow-ips=*"]

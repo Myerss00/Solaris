@@ -1648,9 +1648,9 @@ class TaskScheduler:
             msg["From"] = from_addr
             msg["To"] = to_addr
             msg["Subject"] = f"[Task] {task.name}"
-            msg["X-Odysseus-Origin"] = "odysseus-ui"
-            msg["X-Odysseus-Kind"] = "task"
-            msg["X-Odysseus-Ref"] = str(task.id)
+            msg["X-Solaris-Origin"] = "solaris-ui"
+            msg["X-Solaris-Kind"] = "task"
+            msg["X-Solaris-Ref"] = str(task.id)
             msg.set_content(result or "")
             _send_smtp_message(cfg, from_addr, [to_addr], msg.as_string(), timeout=30)
             logger.info("Task %s emailed result to %s (%sb)", task.id, to_addr, len(result or ""))
@@ -1976,9 +1976,9 @@ class TaskScheduler:
             "subject": f"[Task] {task.name}",
             "body": result,
             "headers": {
-                "X-Odysseus-Origin": "odysseus-ui",
-                "X-Odysseus-Kind": "task",
-                "X-Odysseus-Ref": str(task.id),
+                "X-Solaris-Origin": "solaris-ui",
+                "X-Solaris-Kind": "task",
+                "X-Solaris-Ref": str(task.id),
             },
         }
         if recipient:

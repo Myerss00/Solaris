@@ -1,0 +1,131 @@
+# Production stack for Solaris — separate from docker-compose.yml (dev).
+#
+# Differences from dev:
+#   - Builds Dockerfile.prod (multi-stage, no --reload, healthcheck).
+#   - The app container publishes NOTHING to the host. Caddy is the only
+#     thing bound to a host port (80/443), and reaches solaris over the
+#     internal Docker network. This is what makes "port 80" safe to expose
+#     publicly: TLS terminates at Caddy, never at uvicorn directly.
+#   - AUTH_ENABLED and SECURE_COOKIES are forced on — there is no
+#     "auth optional" mode for a public deployment.
+#   - chromadb/searxng/ntfy keep their dev behavior of binding to
+#     127.0.0.1 only — they are internal dependencies, not meant to be
+#     reachable from the internet even in production.
+#
+# Usage:
+#   cp .env.example .env   # fill in DOMAIN, ADMIN_EMAIL, secrets — see DEPLOY.md
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  solaris:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    env_file: .env
+    environment:
+      - AUTH_ENABLED=true
+      - SECURE_COOKIES=true
+      - LOCALHOST_BYPASS=false
+      - SEARXNG_INSTANCE=http://searxng:8080
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
+      - ALLOWED_ORIGINS=https://${DOMAIN}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${APP_DATA_DIR:-./data}:/app/data:z
+      - ${APP_LOGS_DIR:-./logs}:/app/logs:z
+      - ${APP_DATA_DIR:-./data}/ssh:/app/.ssh:z
+      - ${APP_DATA_DIR:-./data}/huggingface:/app/.cache/huggingface:z
+      - ${APP_DATA_DIR:-./data}/local:/app/.local:z
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      searxng:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+    volumes:
+      - ./docker/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - solaris
+    restart: unless-stopped
+
+  chromadb:
+    image: docker.io/chromadb/chroma:latest
+    ports:
+      - "${CHROMADB_BIND:-127.0.0.1}:8100:8000"
+    volumes:
+      - chromadb-data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+
+  searxng:
+    image: docker.io/searxng/searxng:2026.5.31-7159b8aed
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        if [ ! -s /etc/searxng/settings.yml ] || grep -q 'solaris-local-searxng-json-2026-05-30\|__SEARXNG_SECRET__' /etc/searxng/settings.yml; then
+          secret="$${SEARXNG_SECRET:-}"
+          if [ -z "$$secret" ]; then
+            secret="$$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          fi
+          sed "s|__SEARXNG_SECRET__|$$secret|g" /tmp/searxng-settings.yml.template > /etc/searxng/settings.yml
+        fi
+        exec /usr/local/searxng/entrypoint.sh
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - searxng-data:/etc/searxng
+      - ./config/searxng/settings.yml:/tmp/searxng-settings.yml.template:ro,z
+    environment:
+      - SEARXNG_BASE_URL=https://${DOMAIN}/
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-}
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5).read(1)\""]
+      interval: 5s
+      timeout: 6s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  ntfy:
+    image: docker.io/binwiederhier/ntfy
+    command: serve
+    ports:
+      - "${NTFY_BIND:-127.0.0.1}:8091:80"
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+    environment:
+      - NTFY_BASE_URL=${NTFY_BASE_URL:-http://localhost:8091}
+    restart: unless-stopped
+
+volumes:
+  searxng-data:
+  chromadb-data:
+  ntfy-cache:
+  caddy-data:
+  caddy-config:
