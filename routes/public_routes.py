@@ -42,15 +42,22 @@ HF_MODEL = "black-forest-labs/FLUX.1-schnell"
 # Providers router — the old hostname no longer resolves at all.
 HF_INFERENCE_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
 
-# tier -> seconds the client must wait before the ad-reward token verifies
-AD_TIERS = {
-    "hd": 30,
-    "4k": 45,
-    "video_5s": 60,
-    "video_10s": 90,
-    "video_30s": 150,
-    "video_60s": 240,
+# Every tier requires at least 2 rewarded ads — there is no free tier.
+# Each ad lasts 30s, so required_seconds = ad_count * 30.
+SECONDS_PER_AD = 30
+
+AD_AD_COUNTS = {
+    "basic": 2,
+    "hd": 3,
+    "4k": 4,
+    "video_5s": 2,
+    "video_10s": 3,
+    "video_30s": 5,
+    "video_60s": 8,
 }
+
+# tier -> seconds the client must wait before the ad-reward token verifies
+AD_TIERS = {tier: count * SECONDS_PER_AD for tier, count in AD_AD_COUNTS.items()}
 
 # Stat keys shown on /impact — every one starts at 0 until the admin
 # endpoint records a real number.
@@ -121,7 +128,12 @@ def setup_public_routes() -> APIRouter:
             db.commit()
         finally:
             db.close()
-        return {"token": token, "required_seconds": AD_TIERS[body.tier]}
+        return {
+            "token": token,
+            "required_seconds": AD_TIERS[body.tier],
+            "ad_count": AD_AD_COUNTS[body.tier],
+            "seconds_per_ad": SECONDS_PER_AD,
+        }
 
     @router.post("/api/ads/verify")
     async def ads_verify(body: AdVerifyRequest):
@@ -167,10 +179,9 @@ def setup_public_routes() -> APIRouter:
         if not prompt:
             raise HTTPException(400, "prompt is required")
 
-        if body.tier != "basic":
-            if not body.ad_token:
-                raise HTTPException(400, "ad_token is required for this tier")
-            _spend_ad_token(body.ad_token, body.tier)
+        if not body.ad_token:
+            raise HTTPException(400, "ad_token is required — watch the ads first")
+        _spend_ad_token(body.ad_token, body.tier)
 
         hf_token = os.getenv("HUGGINGFACE_TOKEN", "")
         if not hf_token:

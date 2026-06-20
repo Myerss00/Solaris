@@ -102,36 +102,9 @@
     const style = document.querySelector('#img-style-row .selected').dataset.value;
     const quality = document.querySelector('#img-quality-row .selected').dataset.value; // "basic" | "hd" | "4k"
 
-    if (quality === 'basic') {
-      callGenerate('basic', style, prompt, null);
-    } else {
-      window.pubRunAdFlow(quality)
-        .then(function (token) { callGenerate(quality, style, prompt, token); })
-        .catch(function (e) { showError(e.message || 'Could not verify the ad.'); });
-    }
+    window.pubRunAdFlow(quality)
+      .then(function (token) { callGenerate(quality, style, prompt, token); })
+      .catch(function (e) { showError(e.message || 'Could not verify the ad.'); });
   });
 
-  // ---- "Notify me" signups for video/audio ----
-  function wireSignup(prefix, feature) {
-    const btn = document.getElementById(prefix + '-signup-btn');
-    const input = document.getElementById(prefix + '-signup-email');
-    const msg = document.getElementById(prefix + '-signup-msg');
-    btn.addEventListener('click', function () {
-      const email = input.value.trim();
-      if (!email) { msg.textContent = 'Write your email first.'; return; }
-      msg.textContent = 'Saving...';
-      fetch('/api/notify/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, feature: feature }),
-      })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-        .then(function (res) {
-          msg.textContent = res.ok ? "✅ Done! We'll let you know when it's ready." : (res.d.detail || 'Could not save. Please try again.');
-        })
-        .catch(function () { msg.textContent = 'Could not save. Please try again.'; });
-    });
-  }
-  wireSignup('video', 'video');
-  wireSignup('audio', 'audio');
 })();

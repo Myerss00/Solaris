@@ -22,13 +22,14 @@
 
 <div class="pub-container">
   <div class="pub-tabs">
-    <button class="pub-tab active" data-tab="images">🎨 Images</button>
+    <button class="pub-tab active" data-tab="imagenes">🎨 Imágenes</button>
     <button class="pub-tab" data-tab="videos">🎬 Videos</button>
     <button class="pub-tab" data-tab="audio">🔊 Audio</button>
+    <button class="pub-tab" data-tab="texto">✍️ Texto</button>
   </div>
 
   <!-- ===== IMAGES ===== -->
-  <div class="pub-panel active" id="panel-images">
+  <div class="pub-panel active" id="panel-imagenes">
     <div class="pub-field">
       <label>Describe your image...</label>
       <textarea class="pub-textarea" id="img-prompt" placeholder="An orange sunset over snow-capped mountains..."></textarea>
@@ -46,10 +47,11 @@
     <div class="pub-field">
       <label>Quality</label>
       <div class="pub-chip-row" id="img-quality-row">
-        <div class="pub-chip selected" data-value="basic">Basic — Free, no ad</div>
-        <div class="pub-chip" data-value="hd">HD — 1 ad</div>
-        <div class="pub-chip" data-value="4k">4K — 2 ads</div>
+        <div class="pub-chip selected" data-value="basic">Básica — 2 anuncios</div>
+        <div class="pub-chip" data-value="hd">HD — 3 anuncios</div>
+        <div class="pub-chip" data-value="4k">4K — 4 anuncios</div>
       </div>
+      <p class="pub-ads-note">📺 Ver anuncios cortos (30s) = tu pago. Sin tarjeta. Sin registro. El dinero va a causas humanitarias 🌍</p>
     </div>
     <button class="pub-btn pub-btn-primary" id="img-generate-btn" style="width:100%;justify-content:center;">✨ Generate Image</button>
 
@@ -76,26 +78,24 @@
   <!-- ===== VIDEOS (no model connected yet) ===== -->
   <div class="pub-panel" id="panel-videos">
     <div class="pub-coming-soon">
-      <h3>🎬 Video Generation — Coming Soon</h3>
-      <p>We're connecting the video models. Sign up to know when it's ready.</p>
-      <div class="pub-signup-row">
-        <input type="email" id="video-signup-email" placeholder="you@email.com">
-        <button class="pub-btn pub-btn-primary" id="video-signup-btn">Notify Me</button>
-      </div>
-      <div class="pub-signup-msg" id="video-signup-msg"></div>
+      <h3>🎬 Generación de video — Próximamente</h3>
+      <p>Estamos conectando los modelos de video. Vuelve pronto, no necesitas registrarte para nada.</p>
     </div>
   </div>
 
   <!-- ===== AUDIO (no model connected yet) ===== -->
   <div class="pub-panel" id="panel-audio">
     <div class="pub-coming-soon">
-      <h3>🔊 Audio Generation — Coming Soon</h3>
-      <p>We're connecting the voice, music, and sound-effect models. Sign up to know when it's ready.</p>
-      <div class="pub-signup-row">
-        <input type="email" id="audio-signup-email" placeholder="you@email.com">
-        <button class="pub-btn pub-btn-primary" id="audio-signup-btn">Notify Me</button>
-      </div>
-      <div class="pub-signup-msg" id="audio-signup-msg"></div>
+      <h3>🔊 Generación de audio — Próximamente</h3>
+      <p>Estamos conectando los modelos de voz, música y efectos de sonido. Vuelve pronto, no necesitas registrarte para nada.</p>
+    </div>
+  </div>
+
+  <!-- ===== TEXTO Y HERRAMIENTAS (no model connected yet) ===== -->
+  <div class="pub-panel" id="panel-texto">
+    <div class="pub-coming-soon">
+      <h3>✍️ Texto y herramientas — Próximamente</h3>
+      <p>Estamos conectando las herramientas de escritura, traducción y conversión de documentos. Vuelve pronto, no necesitas registrarte para nada.</p>
     </div>
   </div>
 </div>
@@ -103,10 +103,11 @@
 <!-- Ad reward modal -->
 <div class="pub-modal-overlay" id="pub-ad-modal">
   <div class="pub-modal">
-    <h3>📺 One moment before generating</h3>
+    <h3 id="pub-ad-counter">📺 Anuncio 1 de 2</h3>
     <div class="pub-ad-slot">[ Ad space ]</div>
     <div class="pub-progress-bar"><div class="pub-progress-fill" id="pub-ad-progress-fill"></div></div>
     <div class="pub-ad-countdown">⏱️ Wait <span id="pub-ad-time">--</span>s</div>
+    <div class="pub-ad-overall" id="pub-ad-overall"></div>
     <div class="pub-modal-msg" id="pub-ad-msg"></div>
     <button class="pub-modal-close" id="pub-ad-close" disabled>Close ❌</button>
   </div>
