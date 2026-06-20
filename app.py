@@ -1213,7 +1213,5 @@ async def _shutdown_event():
 if __name__ == "__main__":
     import uvicorn
 
-    bind_host = os.getenv("APP_BIND", "127.0.0.1")
-    bind_port = int(os.environ.get("PORT", os.getenv("APP_PORT", "8000")))
-
-    uvicorn.run(app, host=bind_host, port=bind_port, log_level="info")
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
