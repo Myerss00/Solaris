@@ -114,13 +114,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net "
-                "https://massivesalad.com https://pleased-report.com; "
+                "https://massivesalad.com https://pleased-report.com "
+                "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net "
+                "https://adservice.google.com; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
                 "font-src 'self' https://cdn.jsdelivr.net; "
-                "img-src 'self' data: blob: https://massivesalad.com https://pleased-report.com; "
+                "img-src 'self' data: blob: https://massivesalad.com https://pleased-report.com "
+                "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net "
+                "https://adservice.google.com; "
                 "media-src 'self' blob:; "
-                "connect-src 'self' https://massivesalad.com https://pleased-report.com; "
-                "frame-src 'self'; "
+                "connect-src 'self' https://massivesalad.com https://pleased-report.com "
+                "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net "
+                "https://adservice.google.com; "
+                "frame-src 'self' https://googleads.g.doubleclick.net; "
                 "frame-ancestors 'none'"
             )
         else:

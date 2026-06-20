@@ -840,6 +840,12 @@ async def serve_monetag_sw():
     the site root so its scope covers the whole origin."""
     return FileResponse(abs_join(BASE_DIR, "sw.js"), media_type="application/javascript")
 
+@app.get("/ads.txt")
+async def serve_ads_txt():
+    """Google AdSense authorized-sellers file — must be served from the
+    site root so ad networks (and AdSense's own crawler) can find it."""
+    return FileResponse(abs_join(BASE_DIR, "ads.txt"), media_type="text/plain")
+
 @app.get("/app")
 async def serve_index(request: Request):
     static_path = abs_join(BASE_DIR, "static/index.html")
