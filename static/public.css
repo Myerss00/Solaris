@@ -229,8 +229,6 @@ a { color: inherit; text-decoration: none; }
 .pub-status { color: var(--pub-fg-muted); font-size: 0.9rem; margin-top: 10px; text-align: center; }
 .pub-status.pub-status-error { color: var(--pub-orange); }
 
-.pub-subtabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-
 .pub-select { cursor: pointer; }
 
 .pub-text-output {

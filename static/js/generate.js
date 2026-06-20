@@ -177,15 +177,6 @@
   });
 
   // ---- Text generation (posts, scripts, email, translate, summarize) ----
-  let selectedTask = 'social_post';
-  document.querySelectorAll('#text-subtabs .pub-tab').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('#text-subtabs .pub-tab').forEach(function (b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      selectedTask = btn.dataset.task;
-    });
-  });
-
   const textResultWrap = document.getElementById('text-result-wrap');
   const textSpinner = document.getElementById('text-spinner');
   const textResult = document.getElementById('text-result');
@@ -222,6 +213,7 @@
   document.getElementById('text-generate-btn').addEventListener('click', function () {
     const prompt = document.getElementById('text-prompt').value.trim();
     if (!prompt) { showTextError('Write something first.'); return; }
+    const task = document.getElementById('text-task').value;
 
     window.pubRunAdFlow('text')
       .then(function (token) {
@@ -229,7 +221,7 @@
         return fetch('/api/generate/text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: prompt, task: selectedTask, ad_token: token }),
+          body: JSON.stringify({ prompt: prompt, task: task, ad_token: token }),
         });
       })
       .then(function (r) { return r.json(); })

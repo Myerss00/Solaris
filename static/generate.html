@@ -86,8 +86,8 @@
   <!-- ===== AUDIO (text-to-speech) ===== -->
   <div class="pub-panel" id="panel-audio">
     <div class="pub-field">
-      <label>Enter your text here...</label>
-      <textarea class="pub-textarea" id="audio-text" placeholder="Type or paste the text you want to turn into speech..." style="min-height:140px;"></textarea>
+      <label>Enter your text to convert to speech...</label>
+      <textarea class="pub-textarea" id="audio-text" placeholder="Enter your text to convert to speech..." style="min-height:140px;"></textarea>
     </div>
     <div class="pub-field">
       <label>Voice</label>
@@ -95,7 +95,6 @@
         <option value="default">Default</option>
         <option value="male">Male</option>
         <option value="female">Female</option>
-        <option value="child">Child</option>
       </select>
       <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 3 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
     </div>
@@ -122,16 +121,19 @@
 
   <!-- ===== TEXT AND TOOLS ===== -->
   <div class="pub-panel" id="panel-texto">
-    <div class="pub-subtabs" id="text-subtabs">
-      <button class="pub-tab active" data-task="social_post">Posts</button>
-      <button class="pub-tab" data-task="script">Scripts</button>
-      <button class="pub-tab" data-task="email">Email</button>
-      <button class="pub-tab" data-task="translate">Translate</button>
-      <button class="pub-tab" data-task="summarize">Summarize</button>
+    <div class="pub-field">
+      <label>Enter your prompt...</label>
+      <textarea class="pub-textarea" id="text-prompt" placeholder="Enter your prompt..." style="min-height:140px;"></textarea>
     </div>
     <div class="pub-field">
-      <label>Your text</label>
-      <textarea class="pub-textarea" id="text-prompt" placeholder="Describe what you need, or paste the text to translate/summarize..." style="min-height:140px;"></textarea>
+      <label>Task</label>
+      <select class="pub-select" id="text-task">
+        <option value="social_post">Social Post</option>
+        <option value="script">Script</option>
+        <option value="email">Email</option>
+        <option value="translate">Translate</option>
+        <option value="summarize">Summarize</option>
+      </select>
     </div>
     <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 2 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
     <button class="pub-btn pub-btn-primary" id="text-generate-btn" style="width:100%;justify-content:center;">✨ Generate Text</button>
