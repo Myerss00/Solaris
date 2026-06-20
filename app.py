@@ -834,6 +834,12 @@ async def serve_impact(request: Request):
     """Public transparency/impact page — no auth required."""
     return _serve_html_with_nonce(request, abs_join(BASE_DIR, "static/impact.html"))
 
+@app.get("/sw.js")
+async def serve_monetag_sw():
+    """Monetag ad-network verification service worker — must be served from
+    the site root so its scope covers the whole origin."""
+    return FileResponse(abs_join(BASE_DIR, "sw.js"), media_type="application/javascript")
+
 @app.get("/app")
 async def serve_index(request: Request):
     static_path = abs_join(BASE_DIR, "static/index.html")
