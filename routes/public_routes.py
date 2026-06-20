@@ -230,6 +230,21 @@ def setup_public_routes() -> APIRouter:
         finally:
             db.close()
 
+    def _increment_impact_stat(key: str) -> None:
+        """Bump a real, automatic usage counter (e.g. images_generated) by 1.
+        Unlike the admin-curated stats (donated_usd, schools_funded), this one
+        reflects actual generations as they happen — no admin step needed."""
+        db = SessionLocal()
+        try:
+            row = db.query(ImpactStat).filter(ImpactStat.key == key).first()
+            if row:
+                row.value += 1
+            else:
+                db.add(ImpactStat(key=key, value=1))
+            db.commit()
+        finally:
+            db.close()
+
     @router.post("/api/generate/image")
     async def generate_image(body: GenerateImageRequest):
         prompt = body.prompt.strip()
@@ -261,6 +276,7 @@ def setup_public_routes() -> APIRouter:
             logger.warning("HuggingFace request error: %s", e)
             return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
 
+        _increment_impact_stat("images_generated")
         return {"ok": True, "image_data_url": f"data:{content_type};base64,{image_b64}"}
 
     # ------------------------------------------------------------------

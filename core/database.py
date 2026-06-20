@@ -521,9 +521,13 @@ class AdRewardToken(Base):
 
 class ImpactStat(Base):
     """A single public running-total counter shown on /impact (e.g.
-    images_generated, donated_usd). Values only change via the admin
-    endpoint — there is no automatic accrual from ad revenue or real
-    donations, so every row starts at 0 until real figures are entered."""
+    images_generated, donated_usd). `images_generated` increments
+    automatically on every successful /api/generate/image call (see
+    routes/public_routes.py::_increment_impact_stat) — it's a real usage
+    count, not a curated figure. Money-related stats (donated_usd,
+    schools_funded) only change via the admin endpoint, since those numbers
+    require a human to confirm a real transfer happened; every row starts
+    at 0 until that happens."""
     __tablename__ = "impact_stats"
 
     key = Column(String, primary_key=True)
