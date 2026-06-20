@@ -22,10 +22,10 @@
 
 <div class="pub-container">
   <div class="pub-tabs">
-    <button class="pub-tab active" data-tab="imagenes">🎨 Imágenes</button>
+    <button class="pub-tab active" data-tab="imagenes">🎨 Images</button>
     <button class="pub-tab" data-tab="videos">🎬 Videos</button>
     <button class="pub-tab" data-tab="audio">🔊 Audio</button>
-    <button class="pub-tab" data-tab="texto">✍️ Texto</button>
+    <button class="pub-tab" data-tab="texto">✍️ Text</button>
   </div>
 
   <!-- ===== IMAGES ===== -->
@@ -47,11 +47,11 @@
     <div class="pub-field">
       <label>Quality</label>
       <div class="pub-chip-row" id="img-quality-row">
-        <div class="pub-chip selected" data-value="basic">Básica — 2 anuncios</div>
-        <div class="pub-chip" data-value="hd">HD — 3 anuncios</div>
-        <div class="pub-chip" data-value="4k">4K — 4 anuncios</div>
+        <div class="pub-chip selected" data-value="basic">Basic — 2 ads</div>
+        <div class="pub-chip" data-value="hd">HD — 3 ads</div>
+        <div class="pub-chip" data-value="4k">4K — 4 ads</div>
       </div>
-      <p class="pub-ads-note">📺 Ver anuncios cortos (30s) = tu pago. Sin tarjeta. Sin registro. El dinero va a causas humanitarias 🌍</p>
+      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
     </div>
     <button class="pub-btn pub-btn-primary" id="img-generate-btn" style="width:100%;justify-content:center;">✨ Generate Image</button>
 
@@ -78,24 +78,79 @@
   <!-- ===== VIDEOS (no model connected yet) ===== -->
   <div class="pub-panel" id="panel-videos">
     <div class="pub-coming-soon">
-      <h3>🎬 Generación de video — Próximamente</h3>
-      <p>Estamos conectando los modelos de video. Vuelve pronto, no necesitas registrarte para nada.</p>
+      <h3>🎬 Video Generation — Coming Soon</h3>
+      <p>We're connecting the video models. Check back soon, no sign-up needed.</p>
     </div>
   </div>
 
-  <!-- ===== AUDIO (no model connected yet) ===== -->
+  <!-- ===== AUDIO (text-to-speech) ===== -->
   <div class="pub-panel" id="panel-audio">
-    <div class="pub-coming-soon">
-      <h3>🔊 Generación de audio — Próximamente</h3>
-      <p>Estamos conectando los modelos de voz, música y efectos de sonido. Vuelve pronto, no necesitas registrarte para nada.</p>
+    <div class="pub-field">
+      <label>Enter your text here...</label>
+      <textarea class="pub-textarea" id="audio-text" placeholder="Type or paste the text you want to turn into speech..." style="min-height:140px;"></textarea>
+    </div>
+    <div class="pub-field">
+      <label>Voice</label>
+      <select class="pub-select" id="audio-voice">
+        <option value="default">Default</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="child">Child</option>
+      </select>
+      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 3 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
+    </div>
+    <button class="pub-btn pub-btn-primary" id="audio-generate-btn" style="width:100%;justify-content:center;">🔊 Generate Audio</button>
+
+    <div id="audio-result-wrap" style="display:none; margin-top:2rem; text-align:center;">
+      <div id="audio-spinner" class="pub-spinner-wrap">
+        <span>⏳ Generating your audio...</span>
+        <div class="pub-spinner-bar"><div></div></div>
+      </div>
+
+      <div id="audio-result" class="pub-result" style="display:none;">
+        <audio id="generated-audio" controls style="width:100%;"></audio>
+        <div class="pub-result-actions">
+          <button class="pub-btn pub-btn-primary" id="audio-download-btn">⬇️ Download Audio</button>
+          <button class="pub-btn pub-btn-outline" id="audio-generate-again-btn">🔄 Generate Another</button>
+        </div>
+        <p class="pub-result-footnote">☀️ This audio was generated with Solaris — part of the ad revenue goes to humanitarian aid</p>
+      </div>
+
+      <div id="audio-error-result" class="pub-status pub-status-error" style="display:none;"></div>
     </div>
   </div>
 
-  <!-- ===== TEXTO Y HERRAMIENTAS (no model connected yet) ===== -->
+  <!-- ===== TEXT AND TOOLS ===== -->
   <div class="pub-panel" id="panel-texto">
-    <div class="pub-coming-soon">
-      <h3>✍️ Texto y herramientas — Próximamente</h3>
-      <p>Estamos conectando las herramientas de escritura, traducción y conversión de documentos. Vuelve pronto, no necesitas registrarte para nada.</p>
+    <div class="pub-subtabs" id="text-subtabs">
+      <button class="pub-tab active" data-task="social_post">Posts</button>
+      <button class="pub-tab" data-task="script">Scripts</button>
+      <button class="pub-tab" data-task="email">Email</button>
+      <button class="pub-tab" data-task="translate">Translate</button>
+      <button class="pub-tab" data-task="summarize">Summarize</button>
+    </div>
+    <div class="pub-field">
+      <label>Your text</label>
+      <textarea class="pub-textarea" id="text-prompt" placeholder="Describe what you need, or paste the text to translate/summarize..." style="min-height:140px;"></textarea>
+    </div>
+    <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 2 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
+    <button class="pub-btn pub-btn-primary" id="text-generate-btn" style="width:100%;justify-content:center;">✨ Generate Text</button>
+
+    <div id="text-result-wrap" style="display:none; margin-top:2rem;">
+      <div id="text-spinner" class="pub-spinner-wrap">
+        <span>⏳ Generating your text...</span>
+        <div class="pub-spinner-bar"><div></div></div>
+      </div>
+
+      <div id="text-result" class="pub-result" style="display:none; text-align:left;">
+        <div class="pub-text-output" id="text-output"></div>
+        <div class="pub-result-actions" style="justify-content:flex-start;">
+          <button class="pub-btn pub-btn-primary" id="text-copy-btn">📋 Copy</button>
+          <button class="pub-btn pub-btn-outline" id="text-generate-again-btn">🔄 Generate Another</button>
+        </div>
+      </div>
+
+      <div id="text-error-result" class="pub-status pub-status-error" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -103,7 +158,7 @@
 <!-- Ad reward modal -->
 <div class="pub-modal-overlay" id="pub-ad-modal">
   <div class="pub-modal">
-    <h3 id="pub-ad-counter">📺 Anuncio 1 de 2</h3>
+    <h3 id="pub-ad-counter">📺 Ad 1 of 2</h3>
     <div class="pub-ad-slot">[ Ad space ]</div>
     <div class="pub-progress-bar"><div class="pub-progress-fill" id="pub-ad-progress-fill"></div></div>
     <div class="pub-ad-countdown">⏱️ Wait <span id="pub-ad-time">--</span>s</div>

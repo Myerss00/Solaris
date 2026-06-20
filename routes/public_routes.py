@@ -5,17 +5,21 @@ transparency page (/api/impact/*). None of these touch the owner/session
 auth model — there is no logged-in user here, just anonymous visitors.
 """
 
+import asyncio
 import base64
 import logging
 import os
 import re
 import secrets
+import shutil
+import subprocess
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, model_validator
 
 from core.database import (
@@ -27,6 +31,7 @@ from core.database import (
     SessionLocal,
     utcnow_naive,
 )
+from src.constants import DATA_DIR
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -34,6 +39,7 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # token, HF error, network failure). Never surfaces the underlying exception
 # to the end user — only this one fixed message.
 NO_TOKEN_MESSAGE = "Connecting to the generator... If you're the administrator, add HUGGINGFACE_TOKEN to your .env"
+NO_TTS_MESSAGE = "Connecting to the voice engine... If you're the administrator, install espeak-ng on the server"
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +47,43 @@ HF_MODEL = "black-forest-labs/FLUX.1-schnell"
 # HuggingFace retired api-inference.huggingface.co in favor of the Inference
 # Providers router — the old hostname no longer resolves at all.
 HF_INFERENCE_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+
+# Text-to-speech: every free HuggingFace TTS model (including
+# facebook/mms-tts-eng) has been pulled from the free hf-inference router —
+# they all answer "Model not supported by provider hf-inference" now. espeak-ng
+# is the documented fallback: a real, fully offline, zero-cost TTS engine, so
+# we shell out to it instead. Voice presets below map to espeak-ng's built-in
+# voice variants + pitch/speed flags — "child" is approximated via a higher
+# pitch since espeak-ng has no dedicated child voice.
+ESPEAK_VOICE_ARGS = {
+    "default": ["-v", "en"],
+    "male": ["-v", "en+m3"],
+    "female": ["-v", "en+f3"],
+    "child": ["-v", "en+f4", "-p", "80", "-s", "180"],
+}
+
+# Free instruction-following chat model for posts/scripts/emails/translation/
+# summaries. mistralai/Mistral-7B-Instruct-v0.3 is no longer routable through
+# HuggingFace's free hf-inference provider ("Model not supported by provider
+# hf-inference"); Qwen2.5-7B-Instruct is the closest free substitute that
+# still works through HF's unified chat-completions router.
+TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+TEXT_INFERENCE_URL = "https://router.huggingface.co/v1/chat/completions"
+
+# Generated audio files for anonymous visitors — served back by filename only
+# (see /api/public-audio/{filename}), never by path, so traversal isn't possible.
+PUBLIC_AUDIO_DIR = os.path.join(DATA_DIR, "public_audio")
+os.makedirs(PUBLIC_AUDIO_DIR, exist_ok=True)
+_AUDIO_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.wav$")
+
+# Per-task instruction template for the free text tools.
+TEXT_TASK_PROMPTS = {
+    "social_post": "Write a short, engaging social media post about: {prompt}",
+    "script": "Write a short video script, with brief scene directions, about: {prompt}",
+    "email": "Write a clear, professional email about: {prompt}",
+    "translate": "Translate the following text into English. If it is already in English, translate it into Spanish instead. Only output the translation:\n\n{prompt}",
+    "summarize": "Summarize the following text concisely, in a few sentences:\n\n{prompt}",
+}
 
 # Every tier requires at least 2 rewarded ads — there is no free tier.
 # Each ad lasts 30s, so required_seconds = ad_count * 30.
@@ -50,6 +93,8 @@ AD_AD_COUNTS = {
     "basic": 2,
     "hd": 3,
     "4k": 4,
+    "audio": 3,
+    "text": 2,
     "video_5s": 2,
     "video_10s": 3,
     "video_30s": 5,
@@ -88,9 +133,21 @@ class GenerateImageRequest(BaseModel):
         return self
 
 
+class GenerateAudioRequest(BaseModel):
+    text: str
+    voice: Optional[str] = "default"
+    ad_token: Optional[str] = None
+
+
+class GenerateTextRequest(BaseModel):
+    prompt: str
+    task: str = "social_post"
+    ad_token: Optional[str] = None
+
+
 class SignupRequest(BaseModel):
     email: str
-    feature: str  # "video" or "audio"
+    feature: str  # "video" — the only category still without a connected model
 
 
 class ImpactStatsUpdate(BaseModel):
@@ -207,7 +264,100 @@ def setup_public_routes() -> APIRouter:
         return {"ok": True, "image_data_url": f"data:{content_type};base64,{image_b64}"}
 
     # ------------------------------------------------------------------
-    # "Notify me" signup for video/audio (not connected to a model yet)
+    # Free generation (espeak-ng-backed text-to-speech)
+    # ------------------------------------------------------------------
+
+    def _run_espeak(text: str, voice_args: list, out_path: str) -> None:
+        """Blocking subprocess call — always run via asyncio.to_thread."""
+        subprocess.run(
+            ["espeak-ng", *voice_args, "-w", out_path, text],
+            check=True,
+            capture_output=True,
+            timeout=30,
+        )
+
+    @router.post("/api/generate/audio")
+    async def generate_audio(body: GenerateAudioRequest):
+        text = body.text.strip()
+        if not text:
+            raise HTTPException(400, "text is required")
+
+        if not body.ad_token:
+            raise HTTPException(400, "ad_token is required — watch the ads first")
+        _spend_ad_token(body.ad_token, "audio")
+
+        if not shutil.which("espeak-ng"):
+            return {"ok": False, "status": "placeholder", "message": NO_TTS_MESSAGE}
+
+        voice_args = ESPEAK_VOICE_ARGS.get(body.voice, ESPEAK_VOICE_ARGS["default"])
+        filename = f"{uuid.uuid4().hex}.wav"
+        out_path = os.path.join(PUBLIC_AUDIO_DIR, filename)
+        try:
+            await asyncio.to_thread(_run_espeak, text, voice_args, out_path)
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.warning("espeak-ng TTS failed: %s", e)
+            return {"ok": False, "status": "placeholder", "message": NO_TTS_MESSAGE}
+
+        return {"ok": True, "audio_url": f"/api/public-audio/{filename}"}
+
+    @router.get("/api/public-audio/{filename}")
+    async def public_audio_file(filename: str):
+        if not _AUDIO_FILENAME_RE.match(filename):
+            raise HTTPException(404, "Not found")
+        path = os.path.join(PUBLIC_AUDIO_DIR, filename)
+        if not os.path.isfile(path):
+            raise HTTPException(404, "Not found")
+        return FileResponse(path, media_type="audio/wav")
+
+    # ------------------------------------------------------------------
+    # Free generation (HuggingFace-backed text tools: posts, scripts,
+    # emails, translation, summaries)
+    # ------------------------------------------------------------------
+
+    @router.post("/api/generate/text")
+    async def generate_text(body: GenerateTextRequest):
+        prompt = body.prompt.strip()
+        if not prompt:
+            raise HTTPException(400, "prompt is required")
+        template = TEXT_TASK_PROMPTS.get(body.task)
+        if not template:
+            raise HTTPException(400, f"Unknown task '{body.task}'")
+
+        if not body.ad_token:
+            raise HTTPException(400, "ad_token is required — watch the ads first")
+        _spend_ad_token(body.ad_token, "text")
+
+        hf_token = os.getenv("HUGGINGFACE_TOKEN", "")
+        if not hf_token:
+            return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+
+        instruction = template.format(prompt=prompt)
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(
+                    TEXT_INFERENCE_URL,
+                    headers={"Authorization": f"Bearer {hf_token}"},
+                    json={
+                        "model": TEXT_MODEL,
+                        "messages": [{"role": "user", "content": instruction}],
+                        "max_tokens": 400,
+                    },
+                )
+            if resp.status_code != 200:
+                logger.warning("HuggingFace text generation failed: %s %s", resp.status_code, resp.text[:200])
+                return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+            data = resp.json()
+            generated = data["choices"][0]["message"]["content"].strip()
+            if not generated:
+                return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+        except (httpx.HTTPError, ValueError, KeyError, IndexError) as e:
+            logger.warning("HuggingFace text generation error: %s", e)
+            return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+
+        return {"ok": True, "text": generated}
+
+    # ------------------------------------------------------------------
+    # "Notify me" signup for video (not connected to a model yet)
     # ------------------------------------------------------------------
 
     @router.post("/api/notify/signup")
@@ -215,7 +365,7 @@ def setup_public_routes() -> APIRouter:
         email = body.email.strip().lower()
         if not _EMAIL_RE.match(email):
             raise HTTPException(400, "Invalid email")
-        if body.feature not in ("video", "audio"):
+        if body.feature not in ("video",):
             raise HTTPException(400, "Invalid feature")
         db = SessionLocal()
         try:

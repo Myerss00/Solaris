@@ -8,7 +8,7 @@
   function overallBar(done, total) {
     const filled = '█'.repeat(done);
     const empty = '░'.repeat(Math.max(0, total - done));
-    return 'Progreso: ' + filled + empty + ' ' + done + '/' + total;
+    return 'Progress: ' + filled + empty + ' ' + done + '/' + total;
   }
 
   /**
@@ -44,7 +44,7 @@
           const perAd = data.seconds_per_ad;
 
           function verifyAndResolve() {
-            msg.textContent = '✅ Done! Processing your image...';
+            msg.textContent = '✅ Done! Processing your request...';
             fetch('/api/ads/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -66,7 +66,7 @@
           }
 
           function runAd(adNumber) {
-            counter.textContent = '📺 Anuncio ' + adNumber + ' de ' + adCount;
+            counter.textContent = '📺 Ad ' + adNumber + ' of ' + adCount;
             overall.textContent = overallBar(adNumber - 1, adCount);
             let remaining = perAd;
             timeLabel.textContent = remaining;

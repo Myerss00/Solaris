@@ -107,4 +107,141 @@
       .catch(function (e) { showError(e.message || 'Could not verify the ad.'); });
   });
 
+  // ---- Audio generation (text-to-speech) ----
+  const audioResultWrap = document.getElementById('audio-result-wrap');
+  const audioSpinner = document.getElementById('audio-spinner');
+  const audioResult = document.getElementById('audio-result');
+  const audioErrorResult = document.getElementById('audio-error-result');
+  const generatedAudio = document.getElementById('generated-audio');
+  let lastAudioUrl = null;
+
+  function showAudioSpinner() {
+    audioResultWrap.style.display = 'block';
+    audioSpinner.style.display = 'block';
+    audioResult.style.display = 'none';
+    audioErrorResult.style.display = 'none';
+  }
+  function showAudio(url) {
+    lastAudioUrl = url;
+    generatedAudio.src = url;
+    audioSpinner.style.display = 'none';
+    audioErrorResult.style.display = 'none';
+    audioResult.style.display = 'block';
+  }
+  function showAudioError(message) {
+    audioResultWrap.style.display = 'block';
+    audioSpinner.style.display = 'none';
+    audioResult.style.display = 'none';
+    audioErrorResult.textContent = message;
+    audioErrorResult.style.display = 'block';
+  }
+
+  document.getElementById('audio-download-btn').addEventListener('click', function () {
+    if (!lastAudioUrl) return;
+    const a = document.createElement('a');
+    a.href = lastAudioUrl;
+    a.download = 'solaris-audio.wav';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+  document.getElementById('audio-generate-again-btn').addEventListener('click', function () {
+    audioResultWrap.style.display = 'none';
+  });
+
+  document.getElementById('audio-generate-btn').addEventListener('click', function () {
+    const text = document.getElementById('audio-text').value.trim();
+    if (!text) { showAudioError('Write some text first.'); return; }
+    const voice = document.getElementById('audio-voice').value;
+
+    window.pubRunAdFlow('audio')
+      .then(function (token) {
+        showAudioSpinner();
+        return fetch('/api/generate/audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text, voice: voice, ad_token: token }),
+        });
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok) {
+          showAudio(data.audio_url);
+        } else {
+          showAudioError(data.message || 'Could not generate. Please try again.');
+        }
+      })
+      .catch(function (e) {
+        showAudioError((e && e.message) || 'Could not generate. Please try again.');
+      });
+  });
+
+  // ---- Text generation (posts, scripts, email, translate, summarize) ----
+  let selectedTask = 'social_post';
+  document.querySelectorAll('#text-subtabs .pub-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#text-subtabs .pub-tab').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      selectedTask = btn.dataset.task;
+    });
+  });
+
+  const textResultWrap = document.getElementById('text-result-wrap');
+  const textSpinner = document.getElementById('text-spinner');
+  const textResult = document.getElementById('text-result');
+  const textErrorResult = document.getElementById('text-error-result');
+  const textOutput = document.getElementById('text-output');
+
+  function showTextSpinner() {
+    textResultWrap.style.display = 'block';
+    textSpinner.style.display = 'block';
+    textResult.style.display = 'none';
+    textErrorResult.style.display = 'none';
+  }
+  function showText(text) {
+    textOutput.textContent = text;
+    textSpinner.style.display = 'none';
+    textErrorResult.style.display = 'none';
+    textResult.style.display = 'block';
+  }
+  function showTextError(message) {
+    textResultWrap.style.display = 'block';
+    textSpinner.style.display = 'none';
+    textResult.style.display = 'none';
+    textErrorResult.textContent = message;
+    textErrorResult.style.display = 'block';
+  }
+
+  document.getElementById('text-copy-btn').addEventListener('click', function () {
+    navigator.clipboard.writeText(textOutput.textContent || '');
+  });
+  document.getElementById('text-generate-again-btn').addEventListener('click', function () {
+    textResultWrap.style.display = 'none';
+  });
+
+  document.getElementById('text-generate-btn').addEventListener('click', function () {
+    const prompt = document.getElementById('text-prompt').value.trim();
+    if (!prompt) { showTextError('Write something first.'); return; }
+
+    window.pubRunAdFlow('text')
+      .then(function (token) {
+        showTextSpinner();
+        return fetch('/api/generate/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt, task: selectedTask, ad_token: token }),
+        });
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok) {
+          showText(data.text);
+        } else {
+          showTextError(data.message || 'Could not generate. Please try again.');
+        }
+      })
+      .catch(function (e) {
+        showTextError((e && e.message) || 'Could not generate. Please try again.');
+      });
+  });
 })();

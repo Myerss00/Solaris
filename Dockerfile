@@ -8,6 +8,9 @@ FROM python:3.14-slim
 # nodejs/npm provide npx for the optional built-in Browser MCP server.
 # gosu lets the entrypoint drop privileges cleanly so signals still reach
 # uvicorn directly (no extra shell layer like `su`/`sudo` would add).
+# espeak-ng powers the free, offline /api/generate/audio text-to-speech route
+# on the public /generate page — HuggingFace's free hosted TTS models are no
+# longer reachable through their free Inference router, so this runs locally.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -18,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tmux \
     openssh-client \
     gosu \
+    espeak-ng \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
