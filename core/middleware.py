@@ -73,6 +73,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         is_document_pdf_preview = path.startswith("/api/document/") and path.endswith("/render-pdf")
         # Visual report pages are self-contained HTML — need inline scripts + external images
         is_report = path.startswith("/api/research/report/")
+        # Public marketing pages only — these carry the HilltopAds ad-network
+        # scripts (in-page push + popunder), so they're the only place the
+        # ad domains are allowed in script-src. The rest of the app (incl.
+        # the authenticated workspace) never loads third-party ad scripts.
+        is_public_page = path in ("/", "/generate", "/impact")
 
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
@@ -103,6 +108,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'none'; "
                 "frame-ancestors 'self'"
+            )
+        elif is_public_page:
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net "
+                "https://massivesalad.com https://pleased-report.com; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "font-src 'self' https://cdn.jsdelivr.net; "
+                "img-src 'self' data: blob: https://massivesalad.com https://pleased-report.com; "
+                "media-src 'self' blob:; "
+                "connect-src 'self' https://massivesalad.com https://pleased-report.com; "
+                "frame-src 'self'; "
+                "frame-ancestors 'none'"
             )
         else:
             response.headers["X-Frame-Options"] = "DENY"
