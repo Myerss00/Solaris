@@ -111,11 +111,10 @@ PUBLIC_UPLOADS_DIR = os.path.join(STATIC_DIR, "uploads")
 os.makedirs(PUBLIC_UPLOADS_DIR, exist_ok=True)
 _UPLOAD_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.(jpg|jpeg|png|webp)$")
 
-# Document conversion — pure-Python where possible (pdf2docx, pdfminer.six,
-# python-docx); DOCX/TXT -> PDF goes through weasyprint, which needs native
-# Pango/cairo libraries (see Dockerfile) and is imported lazily so the app
-# still starts fine on a machine that doesn't have them (e.g. local Windows
-# dev) — only that one conversion direction degrades there.
+# Document conversion — entirely pure-Python (pdf2docx, pdfminer.six,
+# python-docx, reportlab for DOCX/TXT -> PDF) — no native system libraries
+# required, so it installs cleanly on Railway/Nixpacks with no Dockerfile
+# changes needed.
 MAX_DOC_CONVERT_BYTES = 20 * 1024 * 1024  # 20MB
 DOC_CONVERT_TARGETS = {
     "pdf": {"docx", "txt"},
@@ -552,7 +551,12 @@ def setup_public_routes() -> APIRouter:
             return
 
         if target_format == "pdf" and source_ext in ("txt", "docx", "doc"):
-            from weasyprint import HTML  # native libs required — see Dockerfile
+            import textwrap
+
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.units import inch
+            from reportlab.pdfgen import canvas
+
             if source_ext == "txt":
                 with open(src_path, "r", encoding="utf-8", errors="replace") as f:
                     body = f.read()
@@ -560,9 +564,24 @@ def setup_public_routes() -> APIRouter:
                 import docx
                 document = docx.Document(src_path)
                 body = "\n".join(p.text for p in document.paragraphs)
-            escaped = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            html = f"<html><body><pre style='font-family:sans-serif; white-space:pre-wrap;'>{escaped}</pre></body></html>"
-            HTML(string=html).write_pdf(dst_path)
+
+            width, height = letter
+            margin = 0.75 * inch
+            font_name, font_size, leading = "Helvetica", 11, 15
+            max_chars_per_line = max(1, int((width - 2 * margin) / (font_size * 0.5)))
+
+            c = canvas.Canvas(dst_path, pagesize=letter)
+            c.setFont(font_name, font_size)
+            y = height - margin
+            for paragraph in body.split("\n"):
+                for line in textwrap.wrap(paragraph, width=max_chars_per_line) or [""]:
+                    if y < margin:
+                        c.showPage()
+                        c.setFont(font_name, font_size)
+                        y = height - margin
+                    c.drawString(margin, y, line)
+                    y -= leading
+            c.save()
             return
 
         raise ValueError(f"Unsupported conversion: {source_ext} -> {target_format}")
@@ -603,7 +622,7 @@ def setup_public_routes() -> APIRouter:
             logger.warning("Document conversion failed (%s -> %s): %s", source_ext, target_format, e)
             return {
                 "ok": False,
-                "message": "Could not convert this file. If it's TXT/DOCX to PDF, the server may be missing the weasyprint rendering libraries.",
+                "message": "Could not convert this file. Please try again.",
             }
         finally:
             if os.path.isfile(src_path):

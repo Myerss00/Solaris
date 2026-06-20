@@ -52,7 +52,6 @@ httpx2
 pdf2docx
 pdfminer.six
 python-docx
-# weasyprint needs native Pango/cairo libs (see Dockerfile) — it only loads
-# on Linux/macOS with those installed, so its import is deferred and
-# try/except-guarded in code rather than done at module scope.
-weasyprint
+# Pure-Python PDF rendering for TXT/DOCX -> PDF (replaces weasyprint, which
+# needed native Pango/cairo libs that broke the Railway build).
+reportlab
