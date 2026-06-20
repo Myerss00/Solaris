@@ -519,6 +519,24 @@ class AdRewardToken(Base):
     used = Column(Boolean, default=False, nullable=False)
 
 
+class VideoJob(Base):
+    """Tracks one /api/generate/video request across the public site's
+    polling flow. The rewarded-ad token is spent exactly once, when the job
+    is created — the client then polls GET /api/generate/video/{id} every
+    ~10s using the job id (not the ad token, which no longer exists after
+    being spent) until status flips to "done" or "failed"."""
+    __tablename__ = "video_jobs"
+
+    id = Column(String, primary_key=True)
+    prompt = Column(String, nullable=False)
+    duration = Column(String, nullable=False)  # ad tier, e.g. "video_5s"
+    status = Column(String, nullable=False, default="processing")  # processing | done | failed
+    video_url = Column(String, nullable=True)
+    message = Column(String, nullable=True)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
+    updated_at = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
+
+
 class ImpactStat(Base):
     """A single public running-total counter shown on /impact (e.g.
     images_generated, donated_usd). `images_generated` increments

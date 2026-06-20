@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, model_validator
 
@@ -29,6 +29,7 @@ from core.database import (
     ImpactProject,
     ImpactStat,
     SessionLocal,
+    VideoJob,
     utcnow_naive,
 )
 from src.constants import DATA_DIR
@@ -40,6 +41,14 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # to the end user — only this one fixed message.
 NO_TOKEN_MESSAGE = "Connecting to the generator... If you're the administrator, add HUGGINGFACE_TOKEN to your .env"
 NO_TTS_MESSAGE = "Connecting to the voice engine... If you're the administrator, install espeak-ng on the server"
+# Unlike images/audio/text, there is currently no free, working text-to-video
+# model reachable through HuggingFace's free router — every option we tried
+# (i2vgen-xl, text-to-video-ms-1.7b, CogVideoX, LTX-Video) answers "Model not
+# supported by provider hf-inference". This is an honest failure message, not
+# a fake "still processing" — video stays wired up so it starts working the
+# moment a real provider is plugged in.
+NO_VIDEO_MESSAGE = "Video generation isn't connected to a free model yet — try Images, Audio, or Text while we look for a free option for video. 🎬"
+VIDEO_PROCESSING_MESSAGE = "Your video is being generated. This may take 2-5 minutes."
 
 logger = logging.getLogger(__name__)
 
@@ -70,11 +79,23 @@ ESPEAK_VOICE_ARGS = {
 TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 TEXT_INFERENCE_URL = "https://router.huggingface.co/v1/chat/completions"
 
+# Text-to-video — tried in this order. Neither currently answers through the
+# free hf-inference router (see NO_VIDEO_MESSAGE above), but kept as the
+# primary/fallback pair so this starts working immediately if HF re-enables
+# either one, with zero code changes.
+VIDEO_MODELS = ["ali-vilab/i2vgen-xl", "damo-vilab/text-to-video-ms-1.7b"]
+VIDEO_INFERENCE_URLS = [f"https://router.huggingface.co/hf-inference/models/{m}" for m in VIDEO_MODELS]
+
 # Generated audio files for anonymous visitors — served back by filename only
 # (see /api/public-audio/{filename}), never by path, so traversal isn't possible.
 PUBLIC_AUDIO_DIR = os.path.join(DATA_DIR, "public_audio")
 os.makedirs(PUBLIC_AUDIO_DIR, exist_ok=True)
 _AUDIO_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.wav$")
+
+# Generated video files — same filename-only serving pattern as audio.
+PUBLIC_VIDEO_DIR = os.path.join(DATA_DIR, "public_video")
+os.makedirs(PUBLIC_VIDEO_DIR, exist_ok=True)
+_VIDEO_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.mp4$")
 
 # Per-task instruction template for the free text tools.
 TEXT_TASK_PROMPTS = {
@@ -95,10 +116,9 @@ AD_AD_COUNTS = {
     "4k": 4,
     "audio": 3,
     "text": 2,
-    "video_5s": 2,
-    "video_10s": 3,
-    "video_30s": 5,
-    "video_60s": 8,
+    "video_5s": 3,
+    "video_10s": 4,
+    "video_25s": 5,
 }
 
 # tier -> seconds the client must wait before the ad-reward token verifies
@@ -142,6 +162,12 @@ class GenerateAudioRequest(BaseModel):
 class GenerateTextRequest(BaseModel):
     prompt: str
     task: str = "social_post"
+    ad_token: Optional[str] = None
+
+
+class GenerateVideoRequest(BaseModel):
+    prompt: str
+    duration: str = "video_5s"  # "video_5s" | "video_10s" | "video_25s"
     ad_token: Optional[str] = None
 
 
@@ -371,6 +397,105 @@ def setup_public_routes() -> APIRouter:
             return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
 
         return {"ok": True, "text": generated}
+
+    # ------------------------------------------------------------------
+    # Free generation (HuggingFace-backed text-to-video, with polling —
+    # generation can take minutes, far longer than one HTTP request should
+    # block for, so the ad token is spent once up front and the client polls
+    # the job id afterward)
+    # ------------------------------------------------------------------
+
+    def _set_video_job(job_id: str, **fields) -> None:
+        db = SessionLocal()
+        try:
+            row = db.query(VideoJob).filter(VideoJob.id == job_id).first()
+            if not row:
+                return
+            for key, value in fields.items():
+                setattr(row, key, value)
+            db.commit()
+        finally:
+            db.close()
+
+    async def _run_video_job(job_id: str, prompt: str) -> None:
+        hf_token = os.getenv("HUGGINGFACE_TOKEN", "")
+        if not hf_token:
+            _set_video_job(job_id, status="failed", message=NO_TOKEN_MESSAGE)
+            return
+
+        for url in VIDEO_INFERENCE_URLS:
+            try:
+                async with httpx.AsyncClient(timeout=120) as client:
+                    resp = await client.post(
+                        url,
+                        headers={"Authorization": f"Bearer {hf_token}"},
+                        json={"inputs": prompt},
+                    )
+                if resp.status_code == 503:
+                    # Model loading — HF's legacy convention: wait the estimated
+                    # time and retry this same model once before moving on.
+                    wait_for = min(resp.json().get("estimated_time", 20), 60)
+                    await asyncio.sleep(wait_for)
+                    async with httpx.AsyncClient(timeout=120) as client:
+                        resp = await client.post(
+                            url,
+                            headers={"Authorization": f"Bearer {hf_token}"},
+                            json={"inputs": prompt},
+                        )
+                if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("video/"):
+                    filename = f"{uuid.uuid4().hex}.mp4"
+                    with open(os.path.join(PUBLIC_VIDEO_DIR, filename), "wb") as f:
+                        f.write(resp.content)
+                    _set_video_job(job_id, status="done", video_url=f"/api/public-video/{filename}")
+                    return
+                logger.warning("HuggingFace video generation failed for %s: %s %s", url, resp.status_code, resp.text[:200])
+            except httpx.HTTPError as e:
+                logger.warning("HuggingFace video request error for %s: %s", url, e)
+
+        _set_video_job(job_id, status="failed", message=NO_VIDEO_MESSAGE)
+
+    @router.post("/api/generate/video")
+    async def generate_video(body: GenerateVideoRequest, background_tasks: BackgroundTasks):
+        prompt = body.prompt.strip()
+        if not prompt:
+            raise HTTPException(400, "prompt is required")
+        if body.duration not in ("video_5s", "video_10s", "video_25s"):
+            raise HTTPException(400, f"Unknown duration '{body.duration}'")
+
+        if not body.ad_token:
+            raise HTTPException(400, "ad_token is required — watch the ads first")
+        _spend_ad_token(body.ad_token, body.duration)
+
+        job_id = uuid.uuid4().hex
+        db = SessionLocal()
+        try:
+            db.add(VideoJob(id=job_id, prompt=prompt, duration=body.duration, status="processing"))
+            db.commit()
+        finally:
+            db.close()
+
+        background_tasks.add_task(_run_video_job, job_id, prompt)
+        return {"ok": True, "status": "processing", "job_id": job_id, "message": VIDEO_PROCESSING_MESSAGE}
+
+    @router.get("/api/generate/video/{job_id}")
+    async def generate_video_status(job_id: str):
+        db = SessionLocal()
+        try:
+            row = db.query(VideoJob).filter(VideoJob.id == job_id).first()
+        finally:
+            db.close()
+        if not row:
+            raise HTTPException(404, "Unknown job")
+        return {"ok": row.status != "failed", "status": row.status, "video_url": row.video_url, "message": row.message}
+
+    @router.get("/api/public-video/{filename}")
+    async def public_video_file(filename: str):
+        if not _VIDEO_FILENAME_RE.match(filename):
+            raise HTTPException(404, "Not found")
+        path = os.path.join(PUBLIC_VIDEO_DIR, filename)
+        if not os.path.isfile(path):
+            raise HTTPException(404, "Not found")
+        return FileResponse(path, media_type="video/mp4")
 
     # ------------------------------------------------------------------
     # "Notify me" signup for video (not connected to a model yet)

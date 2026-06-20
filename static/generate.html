@@ -77,9 +77,37 @@
 
   <!-- ===== VIDEOS (no model connected yet) ===== -->
   <div class="pub-panel" id="panel-videos">
-    <div class="pub-coming-soon">
-      <h3>🎬 Video Generation — Coming Soon</h3>
-      <p>We're connecting the video models. Check back soon, no sign-up needed.</p>
+    <div class="pub-field">
+      <label>Describe your video...</label>
+      <textarea class="pub-textarea" id="video-prompt" placeholder="A sunset over the ocean with birds flying..." style="min-height:140px;"></textarea>
+    </div>
+    <div class="pub-field">
+      <label>Duration</label>
+      <select class="pub-select" id="video-duration">
+        <option value="video_5s">5 seconds — 3 ads</option>
+        <option value="video_10s">10 seconds — 4 ads</option>
+        <option value="video_25s">25 seconds — 5 ads</option>
+      </select>
+      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
+    </div>
+    <button class="pub-btn pub-btn-primary" id="video-generate-btn" style="width:100%;justify-content:center;">🎬 Generate Video</button>
+
+    <div id="video-result-wrap" style="display:none; margin-top:2rem; text-align:center;">
+      <div id="video-spinner" class="pub-spinner-wrap">
+        <span id="video-spinner-text">⏳ Generating your video... This takes 2-5 minutes. Don't close this tab.</span>
+        <div class="pub-spinner-bar"><div></div></div>
+      </div>
+
+      <div id="video-result" class="pub-result" style="display:none;">
+        <video id="generated-video" controls style="width:100%;"></video>
+        <div class="pub-result-actions">
+          <button class="pub-btn pub-btn-primary" id="video-download-btn">⬇️ Download Video</button>
+          <button class="pub-btn pub-btn-outline" id="video-generate-again-btn">🔄 Generate Another</button>
+        </div>
+        <p class="pub-result-footnote">☀️ This video was generated with Solaris — part of the ad revenue goes to humanitarian aid</p>
+      </div>
+
+      <div id="video-error-result" class="pub-status pub-status-error" style="display:none;"></div>
     </div>
   </div>
 

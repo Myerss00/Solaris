@@ -176,6 +176,105 @@
       });
   });
 
+  // ---- Video generation (text-to-video, with polling) ----
+  const videoResultWrap = document.getElementById('video-result-wrap');
+  const videoSpinner = document.getElementById('video-spinner');
+  const videoSpinnerText = document.getElementById('video-spinner-text');
+  const videoResult = document.getElementById('video-result');
+  const videoErrorResult = document.getElementById('video-error-result');
+  const generatedVideo = document.getElementById('generated-video');
+  let lastVideoUrl = null;
+  let videoPollTimer = null;
+
+  function showVideoSpinner(text) {
+    videoSpinnerText.textContent = text || '⏳ Generating your video... This takes 2-5 minutes. Don\'t close this tab.';
+    videoResultWrap.style.display = 'block';
+    videoSpinner.style.display = 'block';
+    videoResult.style.display = 'none';
+    videoErrorResult.style.display = 'none';
+  }
+  function showVideo(url) {
+    lastVideoUrl = url;
+    generatedVideo.src = url;
+    videoSpinner.style.display = 'none';
+    videoErrorResult.style.display = 'none';
+    videoResult.style.display = 'block';
+  }
+  function showVideoError(message) {
+    videoResultWrap.style.display = 'block';
+    videoSpinner.style.display = 'none';
+    videoResult.style.display = 'none';
+    videoErrorResult.textContent = message;
+    videoErrorResult.style.display = 'block';
+  }
+  function stopVideoPolling() {
+    if (videoPollTimer) { clearInterval(videoPollTimer); videoPollTimer = null; }
+  }
+
+  document.getElementById('video-download-btn').addEventListener('click', function () {
+    if (!lastVideoUrl) return;
+    const a = document.createElement('a');
+    a.href = lastVideoUrl;
+    a.download = 'solaris-video.mp4';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+  document.getElementById('video-generate-again-btn').addEventListener('click', function () {
+    stopVideoPolling();
+    videoResultWrap.style.display = 'none';
+  });
+
+  function pollVideoJob(jobId) {
+    stopVideoPolling();
+    videoPollTimer = setInterval(function () {
+      fetch('/api/generate/video/' + jobId)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.status === 'done') {
+            stopVideoPolling();
+            showVideo(data.video_url);
+          } else if (data.status === 'failed') {
+            stopVideoPolling();
+            showVideoError(data.message || 'Could not generate. Please try again.');
+          }
+          // status === "processing": keep polling.
+        })
+        .catch(function () {
+          stopVideoPolling();
+          showVideoError('Could not generate. Please try again.');
+        });
+    }, 10000);
+  }
+
+  document.getElementById('video-generate-btn').addEventListener('click', function () {
+    const prompt = document.getElementById('video-prompt').value.trim();
+    if (!prompt) { showVideoError('Write a description first.'); return; }
+    const duration = document.getElementById('video-duration').value;
+
+    window.pubRunAdFlow(duration)
+      .then(function (token) {
+        showVideoSpinner();
+        return fetch('/api/generate/video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt, duration: duration, ad_token: token }),
+        });
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok && data.status === 'processing') {
+          showVideoSpinner(data.message);
+          pollVideoJob(data.job_id);
+        } else {
+          showVideoError(data.message || 'Could not generate. Please try again.');
+        }
+      })
+      .catch(function (e) {
+        showVideoError((e && e.message) || 'Could not generate. Please try again.');
+      });
+  });
+
   // ---- Text generation (posts, scripts, email, translate, summarize) ----
   const textResultWrap = document.getElementById('text-result-wrap');
   const textSpinner = document.getElementById('text-spinner');
