@@ -63,6 +63,7 @@
         <p class="pub-ads-note">📺 Watch short ads (30s) = your payment. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
       </div>
       <button class="pub-btn pub-btn-primary" id="img-generate-btn" style="width:100%;justify-content:center;">✨ Generate Image</button>
+      <p class="pub-unlimited-note">✨ Unlimited generations — just watch short ads<br>No account needed. No limits. Ever.</p>
 
       <!-- Hidden until a generation request is in flight or finishes -->
       <div id="result" style="display:none; margin-top:2rem; text-align:center;">
@@ -263,7 +264,7 @@
 <div class="pub-modal-overlay" id="pub-ad-modal">
   <div class="pub-modal">
     <h3 id="pub-ad-counter">📺 Ad 1 of 2</h3>
-    <div class="pub-ad-slot">[ Ad space ]</div>
+    <div class="pub-ad-slot" id="pub-ad-slot">📺 Loading ad...</div>
     <div class="pub-progress-bar"><div class="pub-progress-fill" id="pub-ad-progress-fill"></div></div>
     <div class="pub-ad-countdown">⏱️ Wait <span id="pub-ad-time">--</span>s</div>
     <div class="pub-ad-overall" id="pub-ad-overall"></div>

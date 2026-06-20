@@ -5,10 +5,33 @@
 (function () {
   'use strict';
 
+  // Rotates while the user waits — purely motivational copy, not tied to
+  // the actual verification (which is the timer + /api/ads/verify below).
+  var MOTIVATIONAL_MESSAGES = [
+    'Your ad supports free AI for everyone 🌍',
+    'This 30-second ad funds schools in war zones 🏫',
+    "You're helping someone who can't afford AI tools ❤️",
+  ];
+
   function overallBar(done, total) {
     const filled = '█'.repeat(done);
     const empty = '░'.repeat(Math.max(0, total - done));
     return 'Progress: ' + filled + empty + ' ' + done + '/' + total;
+  }
+
+  // Loads the real HilltopAds in-page push tag into the modal's ad slot.
+  // Note: this ad format renders as a browser-level notification/overlay
+  // controlled by the ad network's own script, not as a graphic confined
+  // to this div — there's no "ad finished" callback it exposes, so
+  // completion is still verified by the timer + /api/ads/verify below
+  // (same as how the existing reward-ad gate already worked).
+  function loadRewardAd(slot) {
+    slot.textContent = '';
+    const s = document.createElement('script');
+    s.src = '//massivesalad.com/b_X.VRsnd/GElh0VYPWhcf/lelmY9juVZ/UHlokoP/T/c/xdNVTmUh1CN/DAEzt/NLz/ED1UNmT/Ui0dN/Qj';
+    s.async = true;
+    s.referrerPolicy = 'no-referrer-when-downgrade';
+    slot.appendChild(s);
   }
 
   /**
@@ -22,6 +45,7 @@
     return new Promise(function (resolve, reject) {
       const overlay = document.getElementById('pub-ad-modal');
       const counter = document.getElementById('pub-ad-counter');
+      const slot = document.getElementById('pub-ad-slot');
       const fill = document.getElementById('pub-ad-progress-fill');
       const timeLabel = document.getElementById('pub-ad-time');
       const overall = document.getElementById('pub-ad-overall');
@@ -31,7 +55,14 @@
       overlay.classList.add('open');
       closeBtn.disabled = true;
       closeBtn.textContent = 'Close ❌';
-      msg.textContent = 'While you wait, your ad helps build schools in war zones 🌍';
+      loadRewardAd(slot);
+
+      let msgIndex = 0;
+      msg.textContent = MOTIVATIONAL_MESSAGES[0];
+      const msgTimer = setInterval(function () {
+        msgIndex = (msgIndex + 1) % MOTIVATIONAL_MESSAGES.length;
+        msg.textContent = MOTIVATIONAL_MESSAGES[msgIndex];
+      }, 10000);
 
       fetch('/api/ads/start', {
         method: 'POST',
@@ -44,7 +75,8 @@
           const perAd = data.seconds_per_ad;
 
           function verifyAndResolve() {
-            msg.textContent = '✅ Done! Processing your request...';
+            clearInterval(msgTimer);
+            msg.textContent = '🎉 All done! Generating your creation...';
             fetch('/api/ads/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -81,7 +113,8 @@
                 clearInterval(tick);
                 overall.textContent = overallBar(adNumber, adCount);
                 if (adNumber < adCount) {
-                  runAd(adNumber + 1);
+                  msg.textContent = '✅ Ad complete! Loading next ad...';
+                  setTimeout(function () { runAd(adNumber + 1); }, 1200);
                 } else {
                   closeBtn.disabled = false;
                   verifyAndResolve();
@@ -94,10 +127,12 @@
 
           closeBtn.onclick = function () {
             if (closeBtn.disabled) return;
+            clearInterval(msgTimer);
             overlay.classList.remove('open');
           };
         })
         .catch(function () {
+          clearInterval(msgTimer);
           overlay.classList.remove('open');
           reject(new Error('Could not start the ad. Please try again.'));
         });

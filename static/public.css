@@ -119,6 +119,13 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 48px;
 }
 
+.pub-live-counter {
+  color: var(--pub-gold);
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 14px 0 0;
+}
+
 @media (max-width: 720px) {
   .pub-hero h1 { font-size: 2.1rem; }
 }
@@ -245,6 +252,7 @@ a { color: inherit; text-decoration: none; }
 }
 .pub-chip.selected { border-color: var(--pub-orange); color: var(--pub-fg); background: rgba(255,107,53,0.12); }
 .pub-ads-note { margin-top: 10px; font-size: 0.82rem; color: var(--pub-gold); }
+.pub-unlimited-note { text-align: center; margin-top: 14px; font-size: 0.85rem; color: var(--pub-fg-muted); line-height: 1.6; }
 
 .pub-result {
   margin-top: 24px;
