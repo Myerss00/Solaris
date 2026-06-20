@@ -28,6 +28,10 @@ secrets.env.*
 data/
 !services/hwfit/data/
 !services/hwfit/data/hf_models.json
+
+# User-uploaded/generated files from the public /generate page
+# (image edits, converted documents) — never committed.
+static/uploads/
 logs/
 *.log
 *.db

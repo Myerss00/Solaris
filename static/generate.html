@@ -30,84 +30,122 @@
 
   <!-- ===== IMAGES ===== -->
   <div class="pub-panel active" id="panel-imagenes">
-    <div class="pub-field">
-      <label>Describe your image...</label>
-      <textarea class="pub-textarea" id="img-prompt" placeholder="An orange sunset over snow-capped mountains..."></textarea>
+    <div class="pub-subtabs" id="img-subtabs">
+      <button class="pub-tab active" data-subtab="img-generate">Generate</button>
+      <button class="pub-tab" data-subtab="img-edit">Edit Image</button>
     </div>
-    <div class="pub-field">
-      <label>Style</label>
-      <div class="pub-chip-row" id="img-style-row">
-        <div class="pub-chip selected" data-value="photorealistic">Photorealistic</div>
-        <div class="pub-chip" data-value="anime">Anime</div>
-        <div class="pub-chip" data-value="digital art">Digital Art</div>
-        <div class="pub-chip" data-value="3d render">3D</div>
-        <div class="pub-chip" data-value="painting">Painting</div>
-      </div>
-    </div>
-    <div class="pub-field">
-      <label>Quality</label>
-      <div class="pub-chip-row" id="img-quality-row">
-        <div class="pub-chip selected" data-value="basic">Basic — 2 ads</div>
-        <div class="pub-chip" data-value="hd">HD — 3 ads</div>
-        <div class="pub-chip" data-value="4k">4K — 4 ads</div>
-      </div>
-      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
-    </div>
-    <button class="pub-btn pub-btn-primary" id="img-generate-btn" style="width:100%;justify-content:center;">✨ Generate Image</button>
 
-    <!-- Hidden until a generation request is in flight or finishes -->
-    <div id="result" style="display:none; margin-top:2rem; text-align:center;">
-      <div id="spinner" class="pub-spinner-wrap">
-        <span id="spinner-text">⏳ Generating your image... this can take 15-30 seconds</span>
-        <div class="pub-spinner-bar"><div></div></div>
+    <!-- ----- Generate ----- -->
+    <div class="pub-subpanel active" id="img-generate-subpanel">
+      <div class="pub-field">
+        <label>Describe your image...</label>
+        <textarea class="pub-textarea" id="img-prompt" placeholder="An orange sunset over snow-capped mountains..."></textarea>
       </div>
-
-      <div id="image-result" class="pub-result" style="display:none;">
-        <img id="generated-image" alt="Generated image" style="max-width:100%; border-radius:12px;">
-        <div class="pub-result-actions">
-          <button class="pub-btn pub-btn-primary" id="download-btn">⬇️ Download Free</button>
-          <button class="pub-btn pub-btn-outline" id="generate-again-btn">🔄 Generate Another</button>
+      <div class="pub-field">
+        <label>Style</label>
+        <div class="pub-chip-row" id="img-style-row">
+          <div class="pub-chip selected" data-value="photorealistic">Photorealistic</div>
+          <div class="pub-chip" data-value="anime">Anime</div>
+          <div class="pub-chip" data-value="digital art">Digital Art</div>
+          <div class="pub-chip" data-value="3d render">3D</div>
+          <div class="pub-chip" data-value="painting">Painting</div>
         </div>
-        <p class="pub-result-footnote">☀️ This image was generated with Solaris — part of the ad revenue goes to humanitarian aid</p>
       </div>
+      <div class="pub-field">
+        <label>Quality</label>
+        <div class="pub-chip-row" id="img-quality-row">
+          <div class="pub-chip selected" data-value="basic">Basic — 2 ads</div>
+          <div class="pub-chip" data-value="hd">HD — 3 ads</div>
+          <div class="pub-chip" data-value="4k">4K — 4 ads</div>
+        </div>
+        <p class="pub-ads-note">📺 Watch short ads (30s) = your payment. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
+      </div>
+      <button class="pub-btn pub-btn-primary" id="img-generate-btn" style="width:100%;justify-content:center;">✨ Generate Image</button>
 
-      <div id="error-result" class="pub-status pub-status-error" style="display:none;"></div>
+      <!-- Hidden until a generation request is in flight or finishes -->
+      <div id="result" style="display:none; margin-top:2rem; text-align:center;">
+        <div id="spinner" class="pub-spinner-wrap">
+          <span id="spinner-text">⏳ Generating your image... this can take 15-30 seconds</span>
+          <div class="pub-spinner-bar"><div></div></div>
+        </div>
+
+        <div id="image-result" class="pub-result" style="display:none;">
+          <img id="generated-image" alt="Generated image" style="max-width:100%; border-radius:12px;">
+          <div class="pub-result-actions">
+            <button class="pub-btn pub-btn-primary" id="download-btn">⬇️ Download Free</button>
+            <button class="pub-btn pub-btn-outline" id="generate-again-btn">🔄 Generate Another</button>
+          </div>
+          <p class="pub-result-footnote">☀️ This image was generated with Solaris — part of the ad revenue goes to humanitarian aid</p>
+        </div>
+
+        <div id="error-result" class="pub-status pub-status-error" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ----- Edit Image ----- -->
+    <div class="pub-subpanel" id="img-edit-subpanel">
+      <div class="pub-field">
+        <div class="pub-upload-zone" id="img-edit-upload-zone">
+          <span id="img-edit-upload-label">Drop your image here or click to upload<br><small>JPG, PNG, WEBP — max 10MB</small></span>
+          <input type="file" id="img-edit-file-input" accept=".jpg,.jpeg,.png,.webp" style="display:none;">
+        </div>
+        <img id="img-edit-preview" style="display:none; max-width:100%; max-height:280px; border-radius:12px; margin-top:14px;" alt="Uploaded preview">
+      </div>
+      <div class="pub-field">
+        <label>Describe what you want to change...</label>
+        <textarea class="pub-textarea" id="img-edit-prompt" placeholder="Make the background a sunset beach, add sunglasses to the person, change the hair color to blonde..."></textarea>
+      </div>
+      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 3 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
+      <button class="pub-btn pub-btn-primary" id="img-edit-btn" style="width:100%;justify-content:center;">✏️ Edit Image — 3 ads</button>
+
+      <div id="img-edit-result-wrap" style="display:none; margin-top:2rem; text-align:center;">
+        <div id="img-edit-spinner" class="pub-spinner-wrap">
+          <span>⏳ Editing your image...</span>
+          <div class="pub-spinner-bar"><div></div></div>
+        </div>
+
+        <div id="img-edit-result" class="pub-result" style="display:none;">
+          <div class="pub-compare-grid">
+            <div><p class="pub-compare-label">Original</p><img id="img-edit-original" alt="Original image"></div>
+            <div><p class="pub-compare-label">Edited</p><img id="img-edit-edited" alt="Edited image"></div>
+          </div>
+          <div id="img-edit-note" class="pub-status" style="display:none;"></div>
+          <div class="pub-result-actions">
+            <button class="pub-btn pub-btn-primary" id="img-edit-download-btn">⬇️ Download Result</button>
+            <button class="pub-btn pub-btn-outline" id="img-edit-again-btn">🔄 Edit Another</button>
+          </div>
+        </div>
+
+        <div id="img-edit-error-result" class="pub-status pub-status-error" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
-  <!-- ===== VIDEOS (no model connected yet) ===== -->
+  <!-- ===== VIDEOS (no free model connected yet) ===== -->
   <div class="pub-panel" id="panel-videos">
-    <div class="pub-field">
-      <label>Describe your video...</label>
-      <textarea class="pub-textarea" id="video-prompt" placeholder="A sunset over the ocean with birds flying..." style="min-height:140px;"></textarea>
-    </div>
-    <div class="pub-field">
-      <label>Duration</label>
-      <select class="pub-select" id="video-duration">
-        <option value="video_5s">5 seconds — 3 ads</option>
-        <option value="video_10s">10 seconds — 4 ads</option>
-        <option value="video_25s">25 seconds — 5 ads</option>
-      </select>
-      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
-    </div>
-    <button class="pub-btn pub-btn-primary" id="video-generate-btn" style="width:100%;justify-content:center;">🎬 Generate Video</button>
-
-    <div id="video-result-wrap" style="display:none; margin-top:2rem; text-align:center;">
-      <div id="video-spinner" class="pub-spinner-wrap">
-        <span id="video-spinner-text">⏳ Generating your video... This takes 2-5 minutes. Don't close this tab.</span>
-        <div class="pub-spinner-bar"><div></div></div>
+    <div style="text-align:center; padding: 60px 20px;">
+      <div style="font-size: 4rem;">🎬</div>
+      <h2 style="color: #FF6B35; font-size: 2rem; margin: 16px 0;">
+        Video Generation — Coming Soon
+      </h2>
+      <p style="color: #aaa; max-width: 500px; margin: 0 auto 24px; line-height: 1.8;">
+        We're connecting powerful open-source video models (Wan2.1) to give you free, high-quality video generation.
+        <br><br>
+        The more people use Solaris, the sooner videos arrive. Help us grow — share Solaris with someone today.
+      </p>
+      <div style="background:#1a1a1a; border: 1px solid #FF6B35; border-radius: 12px; padding: 20px; max-width: 400px; margin: 0 auto 32px;">
+        <p style="color: #FFD700; font-size: 0.9rem; margin: 0;">
+          📺 When available: 3-5 ads per video<br>
+          ⏱️ Estimated wait: 2-5 minutes<br>
+          🎬 Length: up to 25 seconds<br>
+          💰 Cost to you: $0.00 forever
+        </p>
       </div>
-
-      <div id="video-result" class="pub-result" style="display:none;">
-        <video id="generated-video" controls style="width:100%;"></video>
-        <div class="pub-result-actions">
-          <button class="pub-btn pub-btn-primary" id="video-download-btn">⬇️ Download Video</button>
-          <button class="pub-btn pub-btn-outline" id="video-generate-again-btn">🔄 Generate Another</button>
-        </div>
-        <p class="pub-result-footnote">☀️ This video was generated with Solaris — part of the ad revenue goes to humanitarian aid</p>
-      </div>
-
-      <div id="video-error-result" class="pub-status pub-status-error" style="display:none;"></div>
+      <a href="/generate#imagenes" style="background: linear-gradient(135deg, #FF6B35, #FFD700);
+      color: #000; padding: 14px 32px; border-radius: 8px;
+      text-decoration: none; font-weight: 700; font-size: 1.1rem;">
+        🎨 Generate Images While You Wait →
+      </a>
     </div>
   </div>
 
@@ -149,38 +187,72 @@
 
   <!-- ===== TEXT AND TOOLS ===== -->
   <div class="pub-panel" id="panel-texto">
-    <div class="pub-field">
-      <label>Enter your prompt...</label>
-      <textarea class="pub-textarea" id="text-prompt" placeholder="Enter your prompt..." style="min-height:140px;"></textarea>
+    <div class="pub-subtabs" id="text-subtabs">
+      <button class="pub-tab active" data-subtab="text-generate">Generate Text</button>
+      <button class="pub-tab" data-subtab="text-documents">Documents</button>
     </div>
-    <div class="pub-field">
-      <label>Task</label>
-      <select class="pub-select" id="text-task">
-        <option value="social_post">Social Post</option>
-        <option value="script">Script</option>
-        <option value="email">Email</option>
-        <option value="translate">Translate</option>
-        <option value="summarize">Summarize</option>
-      </select>
-    </div>
-    <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 2 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
-    <button class="pub-btn pub-btn-primary" id="text-generate-btn" style="width:100%;justify-content:center;">✨ Generate Text</button>
 
-    <div id="text-result-wrap" style="display:none; margin-top:2rem;">
-      <div id="text-spinner" class="pub-spinner-wrap">
-        <span>⏳ Generating your text...</span>
-        <div class="pub-spinner-bar"><div></div></div>
+    <!-- ----- Generate Text ----- -->
+    <div class="pub-subpanel active" id="text-generate-subpanel">
+      <div class="pub-field">
+        <label>Enter your prompt...</label>
+        <textarea class="pub-textarea" id="text-prompt" placeholder="Enter your prompt..." style="min-height:140px;"></textarea>
       </div>
+      <div class="pub-field">
+        <label>Task</label>
+        <select class="pub-select" id="text-task">
+          <option value="social_post">Social Post</option>
+          <option value="script">Script</option>
+          <option value="email">Email</option>
+          <option value="translate">Translate</option>
+          <option value="summarize">Summarize</option>
+        </select>
+      </div>
+      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 2 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
+      <button class="pub-btn pub-btn-primary" id="text-generate-btn" style="width:100%;justify-content:center;">✨ Generate Text</button>
 
-      <div id="text-result" class="pub-result" style="display:none; text-align:left;">
-        <div class="pub-text-output" id="text-output"></div>
-        <div class="pub-result-actions" style="justify-content:flex-start;">
-          <button class="pub-btn pub-btn-primary" id="text-copy-btn">📋 Copy</button>
-          <button class="pub-btn pub-btn-outline" id="text-generate-again-btn">🔄 Generate Another</button>
+      <div id="text-result-wrap" style="display:none; margin-top:2rem;">
+        <div id="text-spinner" class="pub-spinner-wrap">
+          <span>⏳ Generating your text...</span>
+          <div class="pub-spinner-bar"><div></div></div>
         </div>
-      </div>
 
-      <div id="text-error-result" class="pub-status pub-status-error" style="display:none;"></div>
+        <div id="text-result" class="pub-result" style="display:none; text-align:left;">
+          <div class="pub-text-output" id="text-output"></div>
+          <div class="pub-result-actions" style="justify-content:flex-start;">
+            <button class="pub-btn pub-btn-primary" id="text-copy-btn">📋 Copy</button>
+            <button class="pub-btn pub-btn-outline" id="text-generate-again-btn">🔄 Generate Another</button>
+          </div>
+        </div>
+
+        <div id="text-error-result" class="pub-status pub-status-error" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ----- Documents ----- -->
+    <div class="pub-subpanel" id="text-documents-subpanel">
+      <div class="pub-field">
+        <div class="pub-upload-zone" id="doc-upload-zone">
+          <span id="doc-upload-label">Upload your file to convert<br><small>PDF, DOCX, DOC, TXT — max 20MB</small></span>
+          <input type="file" id="doc-file-input" accept=".pdf,.docx,.doc,.txt" style="display:none;">
+        </div>
+        <p id="doc-file-name" class="pub-status" style="display:none;"></p>
+      </div>
+      <div class="pub-field" id="doc-target-field" style="display:none;">
+        <label>Convert to</label>
+        <div class="pub-chip-row" id="doc-target-row"></div>
+      </div>
+      <p class="pub-ads-note">📺 Watch short ads (30s) = your payment — 3 ads. No card. No sign-up. The money goes to humanitarian causes 🌍</p>
+      <button class="pub-btn pub-btn-primary" id="doc-convert-btn" style="width:100%;justify-content:center;" disabled>🔄 Convert — 3 ads</button>
+
+      <div id="doc-result-wrap" style="display:none; margin-top:2rem; text-align:center;">
+        <div id="doc-spinner" class="pub-spinner-wrap">
+          <span>⏳ Converting your file...</span>
+          <div class="pub-spinner-bar"><div></div></div>
+        </div>
+        <div id="doc-result" class="pub-status" style="display:none;"></div>
+        <div id="doc-error-result" class="pub-status pub-status-error" style="display:none;"></div>
+      </div>
     </div>
   </div>
 </div>

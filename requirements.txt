@@ -47,3 +47,12 @@ pytest-asyncio
 # TestClient import when only classic httpx is present. Runtime code keeps
 # using `httpx` above; this is test-client only.
 httpx2
+# Document conversion for the public /generate "Documents" tool
+# (routes/public_routes.py::convert_document). PDF<->DOCX/TXT and DOCX/TXT->PDF.
+pdf2docx
+pdfminer.six
+python-docx
+# weasyprint needs native Pango/cairo libs (see Dockerfile) — it only loads
+# on Linux/macOS with those installed, so its import is deferred and
+# try/except-guarded in code rather than done at module scope.
+weasyprint

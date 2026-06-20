@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, model_validator
 
@@ -32,7 +32,7 @@ from core.database import (
     VideoJob,
     utcnow_naive,
 )
-from src.constants import DATA_DIR
+from src.constants import DATA_DIR, STATIC_DIR
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -97,6 +97,36 @@ PUBLIC_VIDEO_DIR = os.path.join(DATA_DIR, "public_video")
 os.makedirs(PUBLIC_VIDEO_DIR, exist_ok=True)
 _VIDEO_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.mp4$")
 
+# Image editing — like image-edit, both come back "Model not supported by
+# provider hf-inference" when tried live, so we fall back to re-generating a
+# fresh image from FLUX.1-schnell using a combined prompt. That fallback does
+# NOT actually edit the uploaded pixels (FLUX.1-schnell via this endpoint has
+# no image-conditioning input) — the response says so explicitly rather than
+# pretending it edited the photo.
+IMAGE_EDIT_MODELS = ["lllyasviel/sd-controlnet-canny", "runwayml/stable-diffusion-inpainting"]
+IMAGE_EDIT_INFERENCE_URLS = [f"https://router.huggingface.co/hf-inference/models/{m}" for m in IMAGE_EDIT_MODELS]
+MAX_IMAGE_EDIT_BYTES = 10 * 1024 * 1024  # 10MB
+
+PUBLIC_UPLOADS_DIR = os.path.join(STATIC_DIR, "uploads")
+os.makedirs(PUBLIC_UPLOADS_DIR, exist_ok=True)
+_UPLOAD_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.(jpg|jpeg|png|webp)$")
+
+# Document conversion — pure-Python where possible (pdf2docx, pdfminer.six,
+# python-docx); DOCX/TXT -> PDF goes through weasyprint, which needs native
+# Pango/cairo libraries (see Dockerfile) and is imported lazily so the app
+# still starts fine on a machine that doesn't have them (e.g. local Windows
+# dev) — only that one conversion direction degrades there.
+MAX_DOC_CONVERT_BYTES = 20 * 1024 * 1024  # 20MB
+DOC_CONVERT_TARGETS = {
+    "pdf": {"docx", "txt"},
+    "docx": {"pdf", "txt"},
+    "doc": {"pdf", "txt"},
+    "txt": {"pdf", "docx"},
+}
+PUBLIC_CONVERTED_DIR = os.path.join(PUBLIC_UPLOADS_DIR, "converted")
+os.makedirs(PUBLIC_CONVERTED_DIR, exist_ok=True)
+_CONVERTED_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.(pdf|docx|txt)$")
+
 # Per-task instruction template for the free text tools.
 TEXT_TASK_PROMPTS = {
     "social_post": "Write a short, engaging social media post about: {prompt}",
@@ -119,6 +149,8 @@ AD_AD_COUNTS = {
     "video_5s": 3,
     "video_10s": 4,
     "video_25s": 5,
+    "image_edit": 3,
+    "doc_convert": 3,
 }
 
 # tier -> seconds the client must wait before the ad-reward token verifies
@@ -168,6 +200,12 @@ class GenerateTextRequest(BaseModel):
 class GenerateVideoRequest(BaseModel):
     prompt: str
     duration: str = "video_5s"  # "video_5s" | "video_10s" | "video_25s"
+    ad_token: Optional[str] = None
+
+
+class GenerateImageEditRequest(BaseModel):
+    image: str  # base64, optionally as a data: URL
+    prompt: str
     ad_token: Optional[str] = None
 
 
@@ -306,6 +344,82 @@ def setup_public_routes() -> APIRouter:
         return {"ok": True, "image_data_url": f"data:{content_type};base64,{image_b64}"}
 
     # ------------------------------------------------------------------
+    # Free generation (AI image editing — falls back to a fresh FLUX
+    # generation when the dedicated edit models aren't reachable, see
+    # IMAGE_EDIT_MODELS above)
+    # ------------------------------------------------------------------
+
+    @router.post("/api/generate/image-edit")
+    async def generate_image_edit(body: GenerateImageEditRequest):
+        prompt = body.prompt.strip()
+        if not prompt:
+            raise HTTPException(400, "prompt is required")
+
+        raw = body.image.split(",", 1)[-1] if body.image.startswith("data:") else body.image
+        try:
+            image_bytes = base64.b64decode(raw, validate=True)
+        except (ValueError, base64.binascii.Error):
+            raise HTTPException(400, "image must be valid base64")
+        if len(image_bytes) > MAX_IMAGE_EDIT_BYTES:
+            raise HTTPException(400, "image must be 10MB or smaller")
+
+        if not body.ad_token:
+            raise HTTPException(400, "ad_token is required — watch the ads first")
+        _spend_ad_token(body.ad_token, "image_edit")
+
+        hf_token = os.getenv("HUGGINGFACE_TOKEN", "")
+        if not hf_token:
+            return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+
+        image_b64 = base64.b64encode(image_bytes).decode("ascii")
+        for url in IMAGE_EDIT_INFERENCE_URLS:
+            try:
+                async with httpx.AsyncClient(timeout=60) as client:
+                    resp = await client.post(
+                        url,
+                        headers={"Authorization": f"Bearer {hf_token}"},
+                        json={"inputs": image_b64, "parameters": {"prompt": prompt}},
+                    )
+                if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image/"):
+                    filename = f"{uuid.uuid4().hex}.jpg"
+                    with open(os.path.join(PUBLIC_UPLOADS_DIR, filename), "wb") as f:
+                        f.write(resp.content)
+                    _increment_impact_stat("images_generated")
+                    return {"ok": True, "image_url": f"/static/uploads/{filename}", "edited": True}
+                logger.warning("HuggingFace image-edit failed for %s: %s %s", url, resp.status_code, resp.text[:200])
+            except httpx.HTTPError as e:
+                logger.warning("HuggingFace image-edit request error for %s: %s", url, e)
+
+        # Neither edit model is reachable — fall back to a fresh FLUX
+        # generation from the description. This does not use the uploaded
+        # photo's pixels at all, so the response says so explicitly.
+        full_prompt = f"Edit this style image: {prompt}"
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                resp = await client.post(
+                    HF_INFERENCE_URL,
+                    headers={"Authorization": f"Bearer {hf_token}"},
+                    json={"inputs": full_prompt},
+                )
+            if resp.status_code != 200 or not resp.headers.get("content-type", "").startswith("image/"):
+                logger.warning("HuggingFace image-edit fallback failed: %s %s", resp.status_code, resp.text[:200])
+                return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+            filename = f"{uuid.uuid4().hex}.jpg"
+            with open(os.path.join(PUBLIC_UPLOADS_DIR, filename), "wb") as f:
+                f.write(resp.content)
+        except httpx.HTTPError as e:
+            logger.warning("HuggingFace image-edit fallback error: %s", e)
+            return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+
+        _increment_impact_stat("images_generated")
+        return {
+            "ok": True,
+            "image_url": f"/static/uploads/{filename}",
+            "edited": False,
+            "message": "Our dedicated photo editor is unavailable right now, so this is a brand-new image generated from your description instead of an edit of your original photo.",
+        }
+
+    # ------------------------------------------------------------------
     # Free generation (espeak-ng-backed text-to-speech)
     # ------------------------------------------------------------------
 
@@ -397,6 +511,110 @@ def setup_public_routes() -> APIRouter:
             return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
 
         return {"ok": True, "text": generated}
+
+    # ------------------------------------------------------------------
+    # Document conversion (PDF/DOCX/TXT, pure-Python where possible)
+    # ------------------------------------------------------------------
+
+    def _convert_document(src_path: str, source_ext: str, target_format: str, dst_path: str) -> None:
+        """Blocking — always run via asyncio.to_thread. Raises on failure;
+        callers turn that into a clean ok:false response."""
+        if source_ext == "pdf" and target_format == "docx":
+            from pdf2docx import Converter
+            cv = Converter(src_path)
+            cv.convert(dst_path)
+            cv.close()
+            return
+
+        if source_ext == "pdf" and target_format == "txt":
+            from pdfminer.high_level import extract_text
+            text = extract_text(src_path)
+            with open(dst_path, "w", encoding="utf-8") as f:
+                f.write(text)
+            return
+
+        if source_ext in ("docx", "doc") and target_format == "txt":
+            import docx
+            document = docx.Document(src_path)
+            text = "\n".join(p.text for p in document.paragraphs)
+            with open(dst_path, "w", encoding="utf-8") as f:
+                f.write(text)
+            return
+
+        if source_ext == "txt" and target_format == "docx":
+            import docx
+            with open(src_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.read().splitlines()
+            document = docx.Document()
+            for line in lines or [""]:
+                document.add_paragraph(line)
+            document.save(dst_path)
+            return
+
+        if target_format == "pdf" and source_ext in ("txt", "docx", "doc"):
+            from weasyprint import HTML  # native libs required — see Dockerfile
+            if source_ext == "txt":
+                with open(src_path, "r", encoding="utf-8", errors="replace") as f:
+                    body = f.read()
+            else:
+                import docx
+                document = docx.Document(src_path)
+                body = "\n".join(p.text for p in document.paragraphs)
+            escaped = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            html = f"<html><body><pre style='font-family:sans-serif; white-space:pre-wrap;'>{escaped}</pre></body></html>"
+            HTML(string=html).write_pdf(dst_path)
+            return
+
+        raise ValueError(f"Unsupported conversion: {source_ext} -> {target_format}")
+
+    @router.post("/api/convert/document")
+    async def convert_document(
+        file: UploadFile = File(...),
+        target_format: str = Form(...),
+        ad_token: str = Form(...),
+    ):
+        original_name = file.filename or "document"
+        source_ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else ""
+        if source_ext not in DOC_CONVERT_TARGETS:
+            raise HTTPException(400, "Unsupported file type — upload a PDF, DOCX, DOC, or TXT file")
+        if target_format not in DOC_CONVERT_TARGETS[source_ext]:
+            raise HTTPException(400, f"Cannot convert .{source_ext} to .{target_format}")
+        if source_ext == "doc":
+            raise HTTPException(400, "Legacy .doc files aren't supported yet — please save it as .docx first")
+
+        content = await file.read()
+        if len(content) > MAX_DOC_CONVERT_BYTES:
+            raise HTTPException(400, "File must be 20MB or smaller")
+
+        if not ad_token:
+            raise HTTPException(400, "ad_token is required — watch the ads first")
+        _spend_ad_token(ad_token, "doc_convert")
+
+        src_filename = f"{uuid.uuid4().hex}.{source_ext}"
+        dst_filename = f"{uuid.uuid4().hex}.{target_format}"
+        src_path = os.path.join(PUBLIC_CONVERTED_DIR, src_filename)
+        dst_path = os.path.join(PUBLIC_CONVERTED_DIR, dst_filename)
+        with open(src_path, "wb") as f:
+            f.write(content)
+
+        try:
+            await asyncio.to_thread(_convert_document, src_path, source_ext, target_format, dst_path)
+        except Exception as e:
+            logger.warning("Document conversion failed (%s -> %s): %s", source_ext, target_format, e)
+            return {
+                "ok": False,
+                "message": "Could not convert this file. If it's TXT/DOCX to PDF, the server may be missing the weasyprint rendering libraries.",
+            }
+        finally:
+            if os.path.isfile(src_path):
+                os.remove(src_path)
+
+        base_name = original_name.rsplit(".", 1)[0] if "." in original_name else original_name
+        return {
+            "ok": True,
+            "download_url": f"/static/uploads/converted/{dst_filename}",
+            "filename": f"{base_name}.{target_format}",
+        }
 
     # ------------------------------------------------------------------
     # Free generation (HuggingFace-backed text-to-video, with polling —

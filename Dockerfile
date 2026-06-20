@@ -11,6 +11,9 @@ FROM python:3.14-slim
 # espeak-ng powers the free, offline /api/generate/audio text-to-speech route
 # on the public /generate page — HuggingFace's free hosted TTS models are no
 # longer reachable through their free Inference router, so this runs locally.
+# The libpango/libcairo/libgdk-pixbuf set is required by weasyprint (used by
+# routes/public_routes.py::convert_document for TXT/DOCX -> PDF) — without
+# them weasyprint fails to import at all, not just at render time.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -22,6 +25,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     gosu \
     espeak-ng \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libcairo2 \
+    shared-mime-info \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
