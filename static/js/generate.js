@@ -1,6 +1,7 @@
 // /generate page logic — external file so CSP's `script-src 'self'`
 // covers it with no inline-script/nonce dependency at all.
 (function () {
+  function initGeneratePage() {
   // ---- Tabs ----
   document.querySelectorAll('.pub-tabs > .pub-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -459,5 +460,76 @@
       .catch(function (e) {
         showTextError((e && e.message) || 'Could not generate. Please try again.');
       });
+  });
+  }
+
+  // Shown instead of the whole /generate page when an ad blocker is
+  // detected — none of the panel markup or its event handlers are wired,
+  // so the page is unusable until the user disables the blocker and
+  // refreshes (the only escape hatch other than navigating away).
+  function showAdblockBlock() {
+    document.body.innerHTML = '';
+    document.body.style.cssText = 'margin:0; padding:0; background:#000; min-height:100vh; display:flex; align-items:center; justify-content:center; visibility:visible;';
+    document.body.innerHTML = `
+      <div style="text-align:center; padding:40px 20px; max-width:500px;">
+        <div style="font-size:5rem;">🛡️</div>
+        <h1 style="color:#FF6B35; font-size:2rem; margin:16px 0;">
+          Ad Blocker Detected
+        </h1>
+        <p style="color:#aaa; line-height:1.8; margin:0 0 24px; font-size:1rem;">
+          Solaris is completely free because short ads
+          pay for your generations.
+          <br><br>
+          <strong style="color:white;">
+            With an ad blocker, we can't cover the
+            cost of your creations. Please disable it
+            for solarisfortheworld.com to continue.
+          </strong>
+        </p>
+        <div style="background:#111; border:1px solid #333;
+        border-radius:12px; padding:20px; margin:0 0 28px; text-align:left;">
+          <p style="color:#FFD700; margin:0 0 12px;
+          font-weight:600; font-size:14px;">
+            How to disable your ad blocker:
+          </p>
+          <div style="color:#aaa; font-size:14px; line-height:2;">
+            🔸 <b style="color:white;">uBlock Origin</b> → click icon → big power button<br>
+            🔸 <b style="color:white;">AdBlock Plus</b> → click icon → disable on this site<br>
+            🔸 <b style="color:white;">Brave</b> → click 🦁 icon → toggle Shields OFF<br>
+            🔸 <b style="color:white;">AdGuard</b> → click icon → pause protection
+          </div>
+        </div>
+        <button onclick="location.reload()" style="
+          background:linear-gradient(135deg,#FF6B35,#FFD700);
+          color:#000; border:none;
+          padding:16px 40px;
+          border-radius:10px;
+          font-weight:700;
+          font-size:1.1rem;
+          cursor:pointer;
+          width:100%;
+          margin-bottom:16px;
+        ">
+          ✅ I disabled it — Let me in
+        </button>
+        <p style="color:#444; font-size:12px; margin:0;">
+          🌍 Your ads support schools and humanitarian aid worldwide
+        </p>
+        <div style="margin-top:20px;">
+          <a href="/" style="color:#555; font-size:13px;
+          text-decoration:none;">← Back to Home</a>
+        </div>
+      </div>
+    `;
+  }
+
+  window.addEventListener('DOMContentLoaded', async function () {
+    const blocked = await window.SolarisAdblock.check();
+    if (blocked) {
+      showAdblockBlock();
+      return;
+    }
+    document.body.style.visibility = 'visible';
+    initGeneratePage();
   });
 })();

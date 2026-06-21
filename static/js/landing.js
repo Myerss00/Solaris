@@ -39,10 +39,6 @@
         gap: 12px;
       ">
         <span>🛡️ Ad blocker detected — Please disable it for solarisfortheworld.com to generate for free and support humanitarian causes 🌍</span>
-        <button onclick="document.getElementById('adblock-banner').remove()"
-          style="background:rgba(0,0,0,0.3); border:none; color:white;
-          padding:4px 10px; border-radius:4px; cursor:pointer;
-          font-size:12px;">✕</button>
       </div>
     `;
     document.body.prepend(banner);
