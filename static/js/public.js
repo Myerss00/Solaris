@@ -34,6 +34,84 @@
     slot.appendChild(s);
   }
 
+  // Shown instead of the ad-reward modal when an ad blocker is detected —
+  // generation can't be funded by ads it never let load, so the flow stops
+  // here (never resolves/rejects; "refresh" is the only way forward).
+  function showAdblockModal() {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+      <div style="
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      ">
+        <div style="
+          background: #111;
+          border: 1px solid #FF6B35;
+          border-radius: 16px;
+          padding: 40px;
+          max-width: 480px;
+          text-align: center;
+        ">
+          <div style="font-size:3rem;">🛡️</div>
+          <h2 style="color:#FF6B35; margin:16px 0 8px;">
+            Ad blocker detected
+          </h2>
+          <p style="color:#aaa; line-height:1.8; margin:0 0 24px;">
+            Solaris is free because short ads pay for
+            your generations. With an ad blocker active,
+            we can't cover the cost.
+            <br><br>
+            <strong style="color:white;">
+              Disable your ad blocker for this site
+              and refresh to keep generating free. 🌍
+            </strong>
+          </p>
+          <div style="
+            background:#1a1a1a;
+            border:1px solid #333;
+            border-radius:10px;
+            padding:16px;
+            margin:0 0 24px;
+            text-align:left;
+          ">
+            <p style="color:#FFD700; margin:0 0 8px; font-size:13px; font-weight:600;">
+              How to disable:
+            </p>
+            <p style="color:#aaa; margin:0; font-size:13px; line-height:1.8;">
+              🔸 uBlock Origin → click icon → toggle off<br>
+              🔸 AdBlock Plus → click icon → disable on this site<br>
+              🔸 Brave → click Shield icon → disable shields<br>
+              🔸 Other → look for the extension icon and pause it
+            </p>
+          </div>
+          <button onclick="location.reload()" style="
+            background:linear-gradient(135deg,#FF6B35,#FFD700);
+            color:#000; border:none;
+            padding:14px 32px;
+            border-radius:8px;
+            font-weight:700;
+            font-size:1rem;
+            cursor:pointer;
+            width:100%;
+            margin-bottom:12px;
+          ">
+            ✅ I disabled it — Refresh & Generate
+          </button>
+          <p style="color:#555; font-size:12px; margin:0;">
+            Your generations directly support
+            schools and humanitarian aid 🏫
+          </p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
   /**
    * Runs the full ad-reward flow for a tier: every tier requires watching
    * `ad_count` short ads back-to-back (no free tier). Resolves with the
@@ -43,6 +121,17 @@
    */
   window.pubRunAdFlow = function (tier) {
     return new Promise(function (resolve, reject) {
+      window.SolarisAdblock.check().then(function (blocked) {
+        if (blocked) {
+          showAdblockModal();
+          return; // never resolves/rejects — generation stays gated until refresh
+        }
+        runAdFlow(tier, resolve, reject);
+      });
+    });
+  };
+
+  function runAdFlow(tier, resolve, reject) {
       const overlay = document.getElementById('pub-ad-modal');
       const counter = document.getElementById('pub-ad-counter');
       const slot = document.getElementById('pub-ad-slot');
@@ -136,6 +225,5 @@
           overlay.classList.remove('open');
           reject(new Error('Could not start the ad. Please try again.'));
         });
-    });
-  };
+  }
 })();
