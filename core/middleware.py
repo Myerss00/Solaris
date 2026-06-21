@@ -125,8 +125,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "media-src 'self' blob:; "
                 "connect-src 'self' https://massivesalad.com https://pleased-report.com "
                 "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net "
-                "https://adservice.google.com https://quge5.com "
-                "https://static.ads-twitter.com https://connect.facebook.net; "
+                "https://adservice.google.com https://quge5.com; "
                 "frame-src 'self' https://googleads.g.doubleclick.net; "
                 "frame-ancestors 'none'"
             )
