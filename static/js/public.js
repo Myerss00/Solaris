@@ -27,21 +27,19 @@
   // (same as how the existing reward-ad gate already worked).
   function loadRewardAd(slot) {
     slot.textContent = '';
-    slot.style.width = '300px';
-    slot.style.height = '250px';
-    slot.style.margin = '0 auto';
-    slot.style.overflow = 'hidden';
+    slot.style.background = 'transparent';
+    slot.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:#888;font-size:0.9rem;">
+        <div style="font-size:2rem;">🌍</div>
+        <div>Supporting free AI for everyone</div>
+        <div style="font-size:0.75rem;opacity:0.6;">Ad running in background</div>
+      </div>`;
 
-    (function(gmwczz){
-      var d = document,
-          s = d.createElement('script'),
-          l = d.scripts[d.scripts.length - 1];
-      s.settings = gmwczz || {};
-      s.src = "//massivesalad.com/b.XyVhsDdLGllr0VYfWDc_/seQmm9xuTZSUqlFkxPhTgcGx/Npj/Am1POKDhkJt_NKzkEk2SMFDrUG5RMqwz";
-      s.async = true;
-      s.referrerPolicy = 'no-referrer-when-downgrade';
-      slot.appendChild(s);
-    })({});
+    const s = document.createElement('script');
+    s.src = '//massivesalad.com/b.XyVhsDdLGllr0VYfWDc_/seQmm9xuTZSUqlFkxPhTgcGx/Npj/Am1POKDhkJt_NKzkEk2SMFDrUG5RMqwz';
+    s.async = true;
+    s.referrerPolicy = 'no-referrer-when-downgrade';
+    document.body.appendChild(s);
   }
 
   /**
