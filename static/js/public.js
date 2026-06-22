@@ -35,11 +35,16 @@
         <div style="font-size:0.75rem;opacity:0.6;">Ad running in background</div>
       </div>`;
 
-    const s = document.createElement('script');
-    s.src = '//massivesalad.com/b.XyVhsDdLGllr0VYfWDc_/seQmm9xuTZSUqlFkxPhTgcGx/Npj/Am1POKDhkJt_NKzkEk2SMFDrUG5RMqwz';
-    s.async = true;
-    s.referrerPolicy = 'no-referrer-when-downgrade';
-    document.body.appendChild(s);
+    (function(umqsm){
+      var d = document,
+          s = d.createElement('script'),
+          l = d.scripts[d.scripts.length - 1];
+      s.settings = umqsm || {};
+      s.src = "//massivesalad.com/bqXTV/s.dBGml/0bYoWOcf/pedmy9buCZ-UFlzkIPNTVcIx/N/TGU_1fNLj/UWtEN/zpE/1oNoTiUH2pOTQQ";
+      s.async = true;
+      s.referrerPolicy = 'no-referrer-when-downgrade';
+      document.body.appendChild(s);
+    })({});
   }
 
   /**
