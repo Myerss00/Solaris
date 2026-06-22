@@ -27,11 +27,21 @@
   // (same as how the existing reward-ad gate already worked).
   function loadRewardAd(slot) {
     slot.textContent = '';
-    const s = document.createElement('script');
-    s.src = '//massivesalad.com/b_X.VRsnd/GElh0VYPWhcf/lelmY9juVZ/UHlokoP/T/c/xdNVTmUh1CN/DAEzt/NLz/ED1UNmT/Ui0dN/Qj';
-    s.async = true;
-    s.referrerPolicy = 'no-referrer-when-downgrade';
-    slot.appendChild(s);
+    slot.style.width = '300px';
+    slot.style.height = '250px';
+    slot.style.margin = '0 auto';
+    slot.style.overflow = 'hidden';
+
+    (function(gmwczz){
+      var d = document,
+          s = d.createElement('script'),
+          l = d.scripts[d.scripts.length - 1];
+      s.settings = gmwczz || {};
+      s.src = "//massivesalad.com/b.XyVhsDdLGllr0VYfWDc_/seQmm9xuTZSUqlFkxPhTgcGx/Npj/Am1POKDhkJt_NKzkEk2SMFDrUG5RMqwz";
+      s.async = true;
+      s.referrerPolicy = 'no-referrer-when-downgrade';
+      slot.appendChild(s);
+    })({});
   }
 
   /**

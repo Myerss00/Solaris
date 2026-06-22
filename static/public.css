@@ -327,7 +327,7 @@ a { color: inherit; text-decoration: none; }
 .pub-ad-slot {
   background: #000;
   border-radius: 10px;
-  height: 180px;
+  height: 250px;
   display: flex;
   align-items: center;
   justify-content: center;
