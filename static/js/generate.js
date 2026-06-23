@@ -277,6 +277,7 @@
     if (!prompt) { showImgEditError('Describe what you want to change first.'); return; }
     const originalUrl = imgEditDataUrl;
 
+    window.open('https://pleased-report.com/bi3/V.0sPr3Hpev/bHmjVIJEZsDv0/3sMnT/UA1/NWTnU-3gLZTNc/xEN/TNUo1HNnjQEj', '_blank');
     window.pubRunAdFlow('image_edit')
       .then(function (token) {
         showImgEditSpinner();
@@ -374,6 +375,7 @@
   docConvertBtn.addEventListener('click', function () {
     if (!docFile || !docTargetFormat) return;
 
+    window.open('https://pleased-report.com/bi3/V.0sPr3Hpev/bHmjVIJEZsDv0/3sMnT/UA1/NWTnU-3gLZTNc/xEN/TNUo1HNnjQEj', '_blank');
     window.pubRunAdFlow('doc_convert')
       .then(function (token) {
         showDocSpinner();
