@@ -55,8 +55,6 @@
    * disabled until the very last ad finishes.
    */
   window.pubRunAdFlow = function (tier) {
-    // Abrir popunder al iniciar generación
-    window.open('https://pleased-report.com/bi3/V.0sPr3Hpev/bHmjVIJEZsDv0/3sMnT/UA1/NWTnU-3gLZTNc/xEN/TNUo1HNnjQEj', '_blank');
     return new Promise(function (resolve, reject) {
       const overlay = document.getElementById('pub-ad-modal');
       const counter = document.getElementById('pub-ad-counter');
