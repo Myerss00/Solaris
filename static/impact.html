@@ -152,6 +152,11 @@
 
 <script src="/static/js/impact.js"></script>
 
+<!-- Monetag — Service Worker registration (push ad zone 11176708) -->
+<script nonce="{{CSP_NONCE}}">
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(function(){}); }
+</script>
+
 <!-- HilltopAds — Zone 1: In-Page Push -->
 <script nonce="{{CSP_NONCE}}">
 (function(hfkkoe){

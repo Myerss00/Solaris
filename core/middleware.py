@@ -77,7 +77,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # scripts (in-page push + popunder), so they're the only place the
         # ad domains are allowed in script-src. The rest of the app (incl.
         # the authenticated workspace) never loads third-party ad scripts.
-        is_public_page = path in ("/", "/generate", "/impact")
+        is_public_page = path in ("/", "/generate", "/impact", "/sw.js")
 
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
@@ -116,16 +116,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net "
                 "https://massivesalad.com https://pleased-report.com "
                 "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net "
-                "https://adservice.google.com https://quge5.com; "
+                "https://adservice.google.com https://quge5.com https://6opo.com https://5gvci.com https://auqot.com https://ekhay.com https://b3mny.com; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
                 "font-src 'self' https://cdn.jsdelivr.net; "
                 "img-src 'self' data: blob: https://massivesalad.com https://pleased-report.com "
                 "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net "
-                "https://adservice.google.com https://quge5.com; "
+                "https://adservice.google.com https://quge5.com https://6opo.com https://5gvci.com https://auqot.com https://ekhay.com https://b3mny.com; "
                 "media-src 'self' blob:; "
                 "connect-src 'self' https://massivesalad.com https://pleased-report.com "
                 "https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net "
-                "https://adservice.google.com https://quge5.com; "
+                "https://adservice.google.com https://quge5.com https://6opo.com https://5gvci.com "
+                "https://auqot.com https://ekhay.com https://b3mny.com "
+                "https://my.rtmark.net https://094kk.com https://jmosl.com; "
                 "frame-src 'self' https://googleads.g.doubleclick.net; "
                 "frame-ancestors 'none'"
             )
