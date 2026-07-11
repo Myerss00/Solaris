@@ -36,7 +36,10 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Copy app code
 COPY . .
 
-# Create data directory (mount a volume here for persistence)
+# Create data directory. This is NOT persistent by itself — mount a
+# volume at whatever path you point SOLARIS_DATA_DIR at (see
+# .railway-env-example), or the SQLite DB (impact stats, sessions, ad
+# tokens, etc.) is wiped on every container rebuild/restart.
 RUN mkdir -p data logs services/cache/search
 
 # Entrypoint that drops to PUID/PGID (default 1000:1000) and repairs

@@ -2,3 +2,11 @@ HUGGINGFACE_TOKEN=
 ADMIN_API_KEY=
 AUTH_ENABLED=false
 PORT=8080
+
+# Without this, the SQLite DB (impact stats, ad tokens, sessions, etc.)
+# lives on the container's ephemeral filesystem and is wiped on every
+# redeploy/restart. To persist it:
+#   1. Railway dashboard -> this service -> Settings -> Volumes -> Add Volume.
+#      Mount path can be anything, e.g. /data.
+#   2. Set SOLARIS_DATA_DIR below to that exact mount path.
+# SOLARIS_DATA_DIR=/data
