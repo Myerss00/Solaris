@@ -325,6 +325,24 @@ body.home a { color: inherit; text-decoration: none; }
   color: var(--home-muted-3);
 }
 
+/* Ad banner */
+.home-ad-banner { padding: 0 40px 88px; background: #0c0a0e; text-align: center; }
+.home-ad-banner-inner {
+  display: inline-block;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--home-border);
+  background: rgba(255, 255, 255, .02);
+}
+.home-ad-banner-label {
+  margin: 0 0 10px;
+  font: 600 11px 'Manrope', sans-serif;
+  color: var(--home-muted-3);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+@media (max-width: 640px) { .home-ad-banner { padding: 0 20px 56px; } }
+
 /* Impact */
 .home-impact {
   position: relative;
