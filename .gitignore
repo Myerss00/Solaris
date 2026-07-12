@@ -76,6 +76,7 @@ output.txt.txt
 
 # …except shipped static assets
 !static/icons/*.png
+!static/imagine/*.jpg
 
 # …except shipped demo assets in docs/ that the README links to.
 !docs/*.jpg
