@@ -52,10 +52,17 @@ VIDEO_PROCESSING_MESSAGE = "Your video is being generated. This may take 2-5 min
 
 logger = logging.getLogger(__name__)
 
-HF_MODEL = "black-forest-labs/FLUX.1-schnell"
+HF_MODEL = "Tongyi-MAI/Z-Image-Turbo"
 # HuggingFace retired api-inference.huggingface.co in favor of the Inference
-# Providers router — the old hostname no longer resolves at all.
-HF_INFERENCE_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+# Providers router, and the router's own free "hf-inference" provider stopped
+# serving image models entirely (410 Gone, "deprecated and no longer
+# supported by provider hf-inference") — routing through fal-ai's provider
+# slot instead, confirmed live as of 2026-07. fal-ai's response shape differs
+# from both hf-inference and Together: it returns a JSON body with an image
+# URL, not the image itself, so callers must do a second GET to fetch bytes.
+HF_PROVIDER = "fal-ai"
+HF_PROVIDER_MODEL_ID = "fal-ai/z-image/turbo"
+HF_INFERENCE_URL = f"https://router.huggingface.co/{HF_PROVIDER}/{HF_PROVIDER_MODEL_ID}"
 
 # Text-to-speech: every free HuggingFace TTS model (including
 # facebook/mms-tts-eng) has been pulled from the free hf-inference router —
@@ -328,15 +335,23 @@ def setup_public_routes() -> APIRouter:
                 resp = await client.post(
                     HF_INFERENCE_URL,
                     headers={"Authorization": f"Bearer {hf_token}"},
-                    json={"inputs": full_prompt},
+                    json={"prompt": full_prompt},
                 )
-            if resp.status_code != 200 or not resp.headers.get("content-type", "").startswith("image/"):
-                logger.warning("HuggingFace generation failed: %s %s", resp.status_code, resp.text[:200])
+                if resp.status_code != 200:
+                    logger.warning("HuggingFace generation failed: %s %s", resp.status_code, resp.text[:200])
+                    return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+                image_url = resp.json()["images"][0]["url"]
+                image_resp = await client.get(image_url)
+            if image_resp.status_code != 200:
+                logger.warning("HuggingFace generated image fetch failed: %s", image_resp.status_code)
                 return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
-            image_b64 = base64.b64encode(resp.content).decode("ascii")
-            content_type = resp.headers.get("content-type", "image/jpeg")
+            image_b64 = base64.b64encode(image_resp.content).decode("ascii")
+            content_type = image_resp.headers.get("content-type", "image/png")
         except httpx.HTTPError as e:
             logger.warning("HuggingFace request error: %s", e)
+            return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+        except (ValueError, KeyError, IndexError) as e:
+            logger.warning("HuggingFace generation returned unexpected payload: %s", e)
             return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
 
         _increment_impact_stat("images_generated")
@@ -389,25 +404,33 @@ def setup_public_routes() -> APIRouter:
             except httpx.HTTPError as e:
                 logger.warning("HuggingFace image-edit request error for %s: %s", url, e)
 
-        # Neither edit model is reachable — fall back to a fresh FLUX
-        # generation from the description. This does not use the uploaded
-        # photo's pixels at all, so the response says so explicitly.
+        # Neither edit model is reachable — fall back to a fresh generation
+        # from the description using HF_MODEL. This does not use the
+        # uploaded photo's pixels at all, so the response says so explicitly.
         full_prompt = f"Edit this style image: {prompt}"
         try:
             async with httpx.AsyncClient(timeout=60) as client:
                 resp = await client.post(
                     HF_INFERENCE_URL,
                     headers={"Authorization": f"Bearer {hf_token}"},
-                    json={"inputs": full_prompt},
+                    json={"prompt": full_prompt},
                 )
-            if resp.status_code != 200 or not resp.headers.get("content-type", "").startswith("image/"):
-                logger.warning("HuggingFace image-edit fallback failed: %s %s", resp.status_code, resp.text[:200])
+                if resp.status_code != 200:
+                    logger.warning("HuggingFace image-edit fallback failed: %s %s", resp.status_code, resp.text[:200])
+                    return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+                image_url = resp.json()["images"][0]["url"]
+                image_resp = await client.get(image_url)
+            if image_resp.status_code != 200:
+                logger.warning("HuggingFace image-edit fallback image fetch failed: %s", image_resp.status_code)
                 return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
             filename = f"{uuid.uuid4().hex}.jpg"
             with open(os.path.join(PUBLIC_UPLOADS_DIR, filename), "wb") as f:
-                f.write(resp.content)
+                f.write(image_resp.content)
         except httpx.HTTPError as e:
             logger.warning("HuggingFace image-edit fallback error: %s", e)
+            return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
+        except (ValueError, KeyError, IndexError) as e:
+            logger.warning("HuggingFace image-edit fallback returned unexpected payload: %s", e)
             return {"ok": False, "status": "placeholder", "message": NO_TOKEN_MESSAGE}
 
         _increment_impact_stat("images_generated")
