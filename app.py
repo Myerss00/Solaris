@@ -834,6 +834,11 @@ async def serve_impact(request: Request):
     """Public transparency/impact page — no auth required."""
     return _serve_html_with_nonce(request, abs_join(BASE_DIR, "static/impact.html"))
 
+@app.get("/privacy")
+async def serve_privacy(request: Request):
+    """Public privacy policy page — no auth required."""
+    return _serve_html_with_nonce(request, abs_join(BASE_DIR, "static/privacy.html"))
+
 @app.get("/sw.js")
 async def serve_monetag_sw():
     """Monetag ad-network verification service worker — must be served from
